@@ -45,12 +45,12 @@ namespace WebApplication1.Seeders
             {
                 UserId = Guid.NewGuid(),
                 Username = "admin",
-                Email = "admin@test.com",
+                Email = "admin@transviti.com",
                 RoleId = adminRole.RoleId,
                 IsActive = true
             };
 
-            adminUser.PasswordHash = _hasher.HashPassword(adminUser, "Admin123!");
+            adminUser.PasswordHash = _hasher.HashPassword(adminUser, "Abeer@l1");
 
             _context.User.Add(adminUser);
             await _context.SaveChangesAsync();
