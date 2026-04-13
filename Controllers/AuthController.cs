@@ -20,37 +20,15 @@ namespace WebApplication1.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] AuthRegisterDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var createdUser = await _authService.RegisterAsync(dto);
-
-                return Ok(createdUser);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var createdUser = await _authService.RegisterAsync(dto);
+            return Ok(createdUser);
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(AuthLoginDto dto)
         {
-            try
-            {
-                var authResponse = await _authService.LoginAsync(dto);
-
-                return Ok(authResponse);
-            }
-            catch (Exception ex)
-            {
-                return Unauthorized(new
-                {
-                    message = ex.Message
-                });
-            }
+            var authResponse = await _authService.LoginAsync(dto);
+            return Ok(authResponse);
         }
     }
 }

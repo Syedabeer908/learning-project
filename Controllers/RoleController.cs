@@ -29,95 +29,36 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}", Name = "GetRoleById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            try
-            {
-                var role = await _service.GetByIdAsync(id);
-                return Ok(role);
-            }
-            catch (Exception ex) 
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var role = await _service.GetByIdAsync(id);
+            return Ok(role);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRoleDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var createdRole = await _service.AddAsync(dto);
-                return CreatedAtRoute("GetRoleById", new { id = createdRole.RoleId }, createdRole);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var createdRole = await _service.AddAsync(dto);
+            return CreatedAtRoute("GetRoleById", new { id = createdRole.RoleId }, createdRole);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRoleDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var updatedRole = await _service.UpdateAsync(id, dto);
-                return Ok(updatedRole);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var updatedRole = await _service.UpdateAsync(id, dto);
+            return Ok(updatedRole);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            try
-            {
-                await _service.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            await _service.DeleteAsync(id);
+            return Ok(new { message = "Role deleted" });
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRoleDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var PatchRole = await _service.PatchAsync(id, dto);
-                return Ok(PatchRole);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var PatchRole = await _service.PatchAsync(id, dto);
+            return Ok(PatchRole);
         }
     }
 }

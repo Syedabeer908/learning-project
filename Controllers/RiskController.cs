@@ -27,96 +27,36 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}", Name = "GetRiskById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            try
-            {
-                var risk = await _service.GetByIdAsync(id);
-                return Ok(risk);
-            }
-            catch (Exception ex) 
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
-            
+            var risk = await _service.GetByIdAsync(id);
+            return Ok(risk);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRiskDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var createdRisk = await _service.AddAsync(dto);
-                return CreatedAtRoute("GetRiskById", new { id = createdRisk.RiskId }, createdRisk);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var createdRisk = await _service.AddAsync(dto);
+            return CreatedAtRoute("GetRiskById", new { id = createdRisk.RiskId }, createdRisk);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRiskDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var updatedRisk = await _service.UpdateAsync(id, dto);
-                return Ok(updatedRisk);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var updatedRisk = await _service.UpdateAsync(id, dto);
+            return Ok(updatedRisk);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            try
-            {
-                await _service.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            await _service.DeleteAsync(id);
+            return Ok(new { message = "Risk deleted" });
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRiskDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var PatchRisk = await _service.PatchAsync(id, dto);
-                return Ok(PatchRisk);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var PatchRisk = await _service.PatchAsync(id, dto);
+            return Ok(PatchRisk);
         }
     }
 }

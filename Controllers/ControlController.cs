@@ -27,95 +27,36 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}", Name = "GetControlById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            try
-            {
-                var control = await _service.GetByIdAsync(id);
-                return Ok(control);
-            }
-            catch (Exception ex) 
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var control = await _service.GetByIdAsync(id);
+            return Ok(control);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateControlDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var createdControl = await _service.AddAsync(dto);
-                return CreatedAtRoute("GetControlById", new { id = createdControl.ControlId }, createdControl);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var createdControl = await _service.AddAsync(dto);
+            return CreatedAtRoute("GetControlById", new { id = createdControl.ControlId }, createdControl);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateControlDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var updatedControl = await _service.UpdateAsync(id, dto);
-                return Ok(updatedControl);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var updatedControl = await _service.UpdateAsync(id, dto);
+            return Ok(updatedControl);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            try
-            {
-                await _service.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            await _service.DeleteAsync(id);
+            return Ok(new { message = "Control deleted" });
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchControlDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var patchedControl = await _service.PatchAsync(id, dto);
-                return Ok(patchedControl);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new
-                {
-                    message = ex.Message
-                });
-            }
+            var patchedControl = await _service.PatchAsync(id, dto);
+            return Ok(patchedControl);
         }
     }
 }

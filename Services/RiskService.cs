@@ -1,6 +1,7 @@
 ﻿using WebApplication1.Repository.Interfaces;
 using WebApplication1.Entities;
 using WebApplication1.DTOs.Risk;
+using WebApplication1.Exceptions;
 
 namespace WebApplication1.Services
 {
@@ -52,7 +53,7 @@ namespace WebApplication1.Services
             var risk = await _repo.GetByIdAsync(id);
 
             if (risk == null)
-                throw new Exception($"Risk with id {id} not found.");
+                throw new NotFoundException($"Risk with id {id} not found.");
 
             return risk;
         }
@@ -60,7 +61,6 @@ namespace WebApplication1.Services
         public async Task<List<RiskDto>> GetAllAsync()
         {
             var risks = await _repo.GetAllAsync();
-
             return risks.Select(r => ToDto(r)).ToList();
         }
 
@@ -73,20 +73,15 @@ namespace WebApplication1.Services
         public async Task<RiskDto> AddAsync(CreateRiskDto dto)
         {
             var risk = ToEntity(dto);
-
             await _repo.AddAsync(risk);
-
             return ToDto(risk);
         }
 
         public async Task<RiskDto> UpdateAsync(Guid id, UpdateRiskDto dto)
         {
             var risk = await CheckRiskExistAndGet(id);
-
             UpdateEntity(risk, dto);
-
             await _repo.UpdateAsync(risk);
-
             return ToDto(risk);
         }
 
@@ -99,9 +94,7 @@ namespace WebApplication1.Services
         public async Task<RiskDto> PatchAsync(Guid id, PatchRiskDto dto)
         {
             var risk = await CheckRiskExistAndGet(id);
-
             PatchEntity(risk, dto);
-
             await _repo.UpdateAsync(risk);
             return ToDto(risk);
         }

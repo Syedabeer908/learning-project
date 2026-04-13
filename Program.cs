@@ -161,6 +161,8 @@ app.UseAuthentication();
 
 app.UseMiddleware<UserValidationMiddleware>();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 app.UseAuthorization();
 
 app.MapControllers();

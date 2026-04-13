@@ -8,6 +8,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Repository.Interfaces;
 using WebApplication1.Settings;
+using WebApplication1.Exceptions;
 
 namespace WebApplication1.Services
 {
@@ -31,7 +32,7 @@ namespace WebApplication1.Services
         private User ToEntity(AuthRegisterDto dto, Role ?role)
         {
             if (role == null)
-                throw new Exception($"Role '{_roleSettings.User}' not found. Ensure it is seeded in the database.");
+                throw new NotFoundException($"Role '{_roleSettings.User}' not found.");
 
             var user = new User
             {
@@ -58,7 +59,7 @@ namespace WebApplication1.Services
             var exists = await _userRepo.EmailExistsAsync(email, excludeId);
 
             if (exists)
-                throw new Exception($"Invalid Email '{email}'.");
+                throw new BadRequestException($"Invalid Email '{email}'.");
         }
 
         private string GenerateToken(User user)
@@ -90,7 +91,7 @@ namespace WebApplication1.Services
             var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, password);
             if (result == PasswordVerificationResult.Failed)
             {
-                throw new Exception("Invalid username or password");
+                throw new BadRequestException("Invalid email or password");
             }
             if (result == PasswordVerificationResult.SuccessRehashNeeded)
             {
@@ -121,7 +122,7 @@ namespace WebApplication1.Services
             var user = await _userRepo.GetByEmailAsync(email);
 
             if (user == null)
-                throw new Exception("Invalid email or password");
+                throw new NotFoundException("Invalid email or password");
 
             await ValidatePassword(user, password);
 

@@ -1,6 +1,7 @@
 ﻿using WebApplication1.DTOs.Control;
 using WebApplication1.Entities;
 using WebApplication1.Repository.Interfaces;
+using WebApplication1.Exceptions;
 
 namespace WebApplication1.Services
 {
@@ -52,7 +53,7 @@ namespace WebApplication1.Services
             var control = await _repo.GetByIdAsync(id);
 
             if (control == null)
-                throw new Exception($"Risk with id {id} not found.");
+                throw new NotFoundException($"Risk with id {id} not found.");
 
             return control;
         }
@@ -79,7 +80,6 @@ namespace WebApplication1.Services
         public async Task<ControlDto> UpdateAsync(Guid id, UpdateControlDto dto)
         {
             var control = await CheckControlExistAndGet(id);
-
             UpdateEntity(control, dto);
             await _repo.UpdateAsync(control);
             return ToDto(control);
@@ -94,7 +94,6 @@ namespace WebApplication1.Services
         public async Task<ControlDto> PatchAsync(Guid id, PatchControlDto dto)
         {
             var control = await CheckControlExistAndGet(id);
-
             PatchEntity(control, dto);
             await _repo.UpdateAsync(control);
             return ToDto(control);

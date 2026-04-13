@@ -3,6 +3,7 @@ using WebApplication1.DTOs.Role;
 using WebApplication1.Entities;
 using WebApplication1.Repository.Interfaces;
 using WebApplication1.Settings;
+using WebApplication1.Exceptions;
 
 namespace WebApplication1.Services
 {
@@ -53,7 +54,7 @@ namespace WebApplication1.Services
             var role = await _repo.GetByIdAsync(id);
 
             if (role == null)
-                throw new Exception($"Role with id {id} not found.");
+                throw new NotFoundException($"Role with id {id} not found.");
 
             return role;
         }
@@ -62,7 +63,7 @@ namespace WebApplication1.Services
         {
             var exists = await _repo.RoleNameExistsAsync(roleName, excludeId);
             if (exists)
-                throw new Exception($"Role Name '{roleName}' is already in use.");
+                throw new BadRequestException($"Role Name '{roleName}' is already in use.");
         }
 
         private async Task CheckRoleInUse(Guid roleId)
@@ -70,7 +71,7 @@ namespace WebApplication1.Services
             var userWithRole = await _userRepo.GetByRoleIdAsync(roleId);
             if(userWithRole != null)
             {
-                throw new Exception($"Cannot delete role with id {roleId} because it is assigned to one or more users.");
+                throw new BadRequestException($"Cannot delete role with id {roleId} because it is assigned to one or more users.");
             }
         }
 
@@ -79,7 +80,7 @@ namespace WebApplication1.Services
             if (role.Name.Equals(_roleSettings.Admin, StringComparison.OrdinalIgnoreCase) ||
                 role.Name.Equals(_roleSettings.User, StringComparison.OrdinalIgnoreCase))
             {
-                throw new Exception($"Cannot delete startup role '{role.Name}'.");
+                throw new BadRequestException($"Cannot delete startup role '{role.Name}'.");
             }
             await CheckRoleInUse(role.RoleId);
         }
@@ -87,7 +88,6 @@ namespace WebApplication1.Services
         public async Task<List<RoleDto>> GetAllAsync()
         {
             var roles = await _repo.GetAllAsync();
-
             return roles.Select(r => ToDto(r)).ToList();
         }
 

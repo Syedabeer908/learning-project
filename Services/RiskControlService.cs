@@ -2,6 +2,7 @@
 using WebApplication1.Entities;
 using WebApplication1.Entities.Enums;   
 using WebApplication1.Repository.Interfaces;
+using WebApplication1.Exceptions;
 
 namespace WebApplication1.Services
 {
@@ -24,7 +25,6 @@ namespace WebApplication1.Services
             return new RiskControlDto
             {
                 RiskControlId = riskControl.RiskControlId,
-               
                 RiskTitle = riskControl.Risk.RiskTitle,
                 ControlTitle = riskControl.Control.ControlTitle,
                 ControlMethod = ControlMethodToString(riskControl.ControlMethod)
@@ -34,10 +34,10 @@ namespace WebApplication1.Services
         private async Task<RiskControl> ToEntity(CreateRiskControlDto dto)
         {
             var risk = await _riskRepo.GetByIdAsync(dto.RiskId);
-            if (risk == null) throw new Exception($"Risk with GUID {dto.RiskId} not found.");
+            if (risk == null) throw new NotFoundException($"Risk with GUID {dto.RiskId} not found.");
 
             var control = await _controlRepo.GetByIdAsync(dto.ControlId);
-            if (control == null) throw new Exception($"Control with GUID {dto.ControlId} not found.");
+            if (control == null) throw new NotFoundException($"Control with GUID {dto.ControlId} not found.");
 
 
             return new RiskControl
@@ -64,7 +64,7 @@ namespace WebApplication1.Services
         private ControlMethod ParseControlMethod(string method)
         {
             if (!Enum.TryParse<ControlMethod>(method, true, out var result))
-                throw new Exception($"Invalid ControlMethod: {method}");
+                throw new NotFoundException($"Invalid ControlMethod: {method}");
             return result;
         }
 
@@ -78,7 +78,7 @@ namespace WebApplication1.Services
             var riskControl = await _repo.GetByIdAsync(id);
 
             if (riskControl == null)
-                throw new Exception($"RiskControl with id {id} not found.");
+                throw new NotFoundException($"RiskControl with id {id} not found.");
 
             return riskControl;
         }

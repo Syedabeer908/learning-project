@@ -7,7 +7,6 @@ namespace WebApplication1.Repository.Implementations
     public class UserRepository : IUserRepository
     {
         private readonly ApplicationDbContext _context;
-
         public UserRepository(ApplicationDbContext context)
         {
             _context = context;
@@ -33,7 +32,9 @@ namespace WebApplication1.Repository.Implementations
 
         public async Task<List<User>> GetAllAsync()
         {
-            return await _context.User.Include(u => u.Role).ToListAsync();
+            return await _context.User
+                .Include(u => u.Role)
+                .ToListAsync();
         }
 
         public async Task AddAsync(User user)
@@ -61,9 +62,11 @@ namespace WebApplication1.Repository.Implementations
                                && (!excludeId.HasValue || u.UserId != excludeId));
         }
 
-        public async Task<int> CountAsync(string role)
+        public async Task<int> CountAsync(string roleName)
         {
-            return await _context.User.CountAsync(u => u.Role.Name.Equals(role, StringComparison.OrdinalIgnoreCase));
+            return await _context.User
+                .Where(u => u.Role.Name.ToLower() == roleName.ToLower())
+                .CountAsync();
         }
     }
 }

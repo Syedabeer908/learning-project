@@ -64,8 +64,7 @@ namespace WebApplication1.Middlewares
 
             if (!Guid.TryParse(userIdClaim, out var userId) || !int.TryParse(tokenVersionClaim, out var tokenVersionFromToken))
             {
-                context.Response.StatusCode = 401;
-                await WriteJsonResponse(context, "Invalid token.");
+                await UnauthorizedResponse(context, "Invalid token.");
                 return;
             }
 
@@ -74,15 +73,13 @@ namespace WebApplication1.Middlewares
 
             if (user == null || !user.IsActive)
             {
-                context.Response.StatusCode = 403;
-                await WriteJsonResponse(context, "You are not allowed to access this resource.");
+                await ForbiddenResponse(context, "You are not allowed to access this resource.");
                 return;
             }
 
             if (user.TokenVersion != tokenVersionFromToken)
             {
-                context.Response.StatusCode = 401;
-                await WriteJsonResponse(context, "Token has been invalidated. Please login again.");
+                await UnauthorizedResponse(context, "Token has been invalidated. Please login again.");
                 return;
             }
 
@@ -93,6 +90,18 @@ namespace WebApplication1.Middlewares
         {
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = message }));
+        }
+
+        private static Task UnauthorizedResponse(HttpContext context, string message)
+        {
+            context.Response.StatusCode = 401;
+            return WriteJsonResponse(context, message);
+        }
+
+        private static Task ForbiddenResponse(HttpContext context, string message)
+        {
+            context.Response.StatusCode = 403;
+            return WriteJsonResponse(context, message);
         }
     }
 }
