@@ -1,0 +1,57 @@
+﻿using Microsoft.EntityFrameworkCore;
+using System.Data;
+using WebApplication1.Entities;
+using WebApplication1.Repository.Interfaces;
+
+namespace WebApplication1.Repository.Implementations
+{
+    public class RoleRepository : IRoleRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public RoleRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Role?> GetByIdAsync(Guid id)
+        {
+            return await _context.Role.FirstOrDefaultAsync(r => r.RoleId == id);
+        }
+
+        public async Task<Role?> GetByNameAsync(string name)
+        {
+            return await _context.Role.FirstOrDefaultAsync(r => r.Name == name);
+        }
+
+        public async Task<List<Role>> GetAllAsync()
+        {
+            return await _context.Role.ToListAsync();
+        }
+
+        public async Task AddAsync(Role role)
+        {
+            await _context.Role.AddAsync(role);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Role role)
+        {
+            _context.Role.Update(role);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(Role role)
+        {
+            _context.Role.Remove(role);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> RoleNameExistsAsync(string roleName, Guid? excludeId = null)
+        {
+            return await _context.Role
+                .AnyAsync(u => u.Name.ToLower() == roleName.ToLower()
+                               && (!excludeId.HasValue || u.RoleId != excludeId));
+        }
+    }
+}

@@ -52,3 +52,4 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+/obj/Debug/net8.0/rpswa.dswa.cache.json
