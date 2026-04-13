@@ -7,50 +7,45 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
-# Build results
+# Visual Studio
 .vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
 [Dd]ebug/
-[Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
 x64/
 x86/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
+bin/
+obj/
 bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
 
-# .NET Core
+# Logs
+log/
+logs/
+
+# .NET
+artifacts/
 project.lock.json
 project.fragment.lock.json
-artifacts/
 
-# ASP.NET Scaffolding
-ScaffoldingReadMe.txt
-
-# NuGet Packages
+# NuGet
 *.nupkg
-# NuGet Symbol Packages
 *.snupkg
 
-# Others
+# Test results
+TestResults/
+*.trx
+*.xml
+
+# Misc
 ~$*
 *~
 CodeCoverage/
-
-# MSBuild Binary and Structured Log
 *.binlog
-
-# MSTest test Results
-[Tt]est[Rr]esult*/
-[Bb]uild[Ll]og.*
-
-# NUnit
-*.VisualState.xml
-TestResult.xml
-nunit-*.xml
-/obj/Debug/net8.0/rpswa.dswa.cache.json
