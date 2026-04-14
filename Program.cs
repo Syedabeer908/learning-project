@@ -5,13 +5,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using StackExchange.Redis;
-using WebApplication1.Entities;
-using WebApplication1.Middlewares;
-using WebApplication1.Repository.Implementations;
-using WebApplication1.Repository.Interfaces;
 using WebApplication1.Seeders;
+using WebApplication1.Middlewares;
+using WebApplication1.Entities;
 using WebApplication1.Services;
-using WebApplication1.Settings;
+using WebApplication1.Interfaces;
+using WebApplication1.Repository;
+using WebApplication1.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +24,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Adding DbContext with configuration using appsettings.json
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register Redis ConnectionMultiplexer (Singleton)
@@ -35,12 +35,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 });
 
 // Adding JwtSettings configuration
-builder.Services.Configure<JwtSettings>(
+builder.Services.Configure<JwtConfig>(
     builder.Configuration.GetSection("SecretKeys:Jwt")
 );
 
 // Adding StartupRoleSettings configuration
-builder.Services.Configure<RoleSettings>(
+builder.Services.Configure<RoleConfig>(
     builder.Configuration.GetSection("StartUpRole"));
 
 // Adding Authorization policies
@@ -68,12 +68,12 @@ builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ControlService>();
 builder.Services.AddScoped<RiskControlService>();
 builder.Services.AddScoped<RedisService>();
-builder.Services.AddScoped<RoleSettings>();
+builder.Services.AddScoped<RoleConfig>();
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration
     .GetSection("SecretKeys:Jwt")
-    .Get<JwtSettings>();
+    .Get<JwtConfig>();
 
 var jwtSettingsKey = jwtSettings?.Key ?? "3d7tt#JbeX!&FY3!%e+XQE8xtrHFcpqc";
 
@@ -142,8 +142,8 @@ var app = builder.Build();
 //seeding data
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleSettings>>();
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleConfig>>();
     var seeder = new DbSeeder(context, roleSettings);
     await seeder.SeedAsync();
 }

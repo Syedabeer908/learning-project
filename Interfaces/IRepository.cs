@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace WebApplication1.Repository.Interfaces
+namespace WebApplication1.Interfaces
 {
     public interface IRepository<T> where T : class
     {

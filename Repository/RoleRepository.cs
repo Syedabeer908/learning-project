@@ -1,15 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Data;
 using WebApplication1.Entities;
-using WebApplication1.Repository.Interfaces;
+using WebApplication1.Interfaces;
 
-namespace WebApplication1.Repository.Implementations
+namespace WebApplication1.Repository
 {
     public class RoleRepository : IRoleRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
 
-        public RoleRepository(ApplicationDbContext context)
+        public RoleRepository(AppDbContext context)
         {
             _context = context;
         }

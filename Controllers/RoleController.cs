@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
 using WebApplication1.DTOs.Role;
 using WebApplication1.Services;
-using WebApplication1.Settings;
 
 namespace WebApplication1.Controllers
 {

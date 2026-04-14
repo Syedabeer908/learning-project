@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebApplication1.Entities;
 
-public class ApplicationDbContext : DbContext
+public class AppDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options) { }
 
     public DbSet<Risk> Risk { get; set; }

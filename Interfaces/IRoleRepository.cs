@@ -1,6 +1,6 @@
 ﻿using WebApplication1.Entities;
 
-namespace WebApplication1.Repository.Interfaces
+namespace WebApplication1.Interfaces
 {
     public interface IRoleRepository
     {

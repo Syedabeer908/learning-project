@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebApplication1.Entities;
-using WebApplication1.Repository.Interfaces;
+using WebApplication1.Interfaces;
 
-namespace WebApplication1.Repository.Implementations
+namespace WebApplication1.Repository
 {
     public class UserRepository : IUserRepository
     {
-        private readonly ApplicationDbContext _context;
-        public UserRepository(ApplicationDbContext context)
+        private readonly AppDbContext _context;
+        public UserRepository(AppDbContext context)
         {
             _context = context;
         }
@@ -30,8 +30,9 @@ namespace WebApplication1.Repository.Implementations
                                        .FirstOrDefaultAsync(u => u.RoleId == roleId);
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<List<User>> GetAllAsync(string? search, bool? isActive, int page, int pageSize)
         {
+            //var query = await _context.User.AsQuerAble
             return await _context.User
                 .Include(u => u.Role)
                 .ToListAsync();

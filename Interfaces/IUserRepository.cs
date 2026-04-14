@@ -1,13 +1,13 @@
 ﻿using WebApplication1.Entities;
 
-namespace WebApplication1.Repository.Interfaces
+namespace WebApplication1.Interfaces
 {
     public interface IUserRepository
     {
         Task<User?> GetByIdAsync(Guid id);
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetByRoleIdAsync(Guid roleId);
-        Task<List<User>> GetAllAsync();
+        Task<List<User>> GetAllAsync(string? search, bool? isActive, int page, int pageSize);
 
         Task AddAsync(User user);
         Task UpdateAsync(User user);

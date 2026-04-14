@@ -20,9 +20,12 @@ namespace WebApplication1.Controllers
         }
 
         [HttpGet("users")]
-        public async Task<IActionResult> GetAllAsync()
+        public async Task<IActionResult> GetAllAsync( [FromQuery] string? search,
+                [FromQuery] bool? isActive,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 1 )
         {
-            var users = await _service.GetAllAsync();
+            var users = await _service.GetAllAsync(search, isActive, page, pageSize);
             return Ok(users);
         }
 

@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
-using WebApplication1.DTOs.Admin;
-using WebApplication1.Entities;
 using WebApplication1.Exceptions;
-using WebApplication1.Repository.Interfaces;
-using WebApplication1.Settings;
+using WebApplication1.Entities;
+using WebApplication1.DTOs.Admin;
+using WebApplication1.Interfaces;
+using WebApplication1.Configuration;
 
 namespace WebApplication1.Services
 {
@@ -16,15 +16,15 @@ namespace WebApplication1.Services
         
         private readonly UserDomainService _userDomainService;
         private readonly RedisService _redis;
-        private readonly RoleSettings _roleSettings;
+        private readonly RoleConfig _roleConfig;
         private readonly PasswordHasher<User> _hasher;
 
-        public AdminService(IUserRepository repo, UserDomainService userDomainService, RedisService redis, IOptions<RoleSettings> roleOptions)
+        public AdminService(IUserRepository repo, UserDomainService userDomainService, RedisService redis, IOptions<RoleConfig> roleOptions)
         {
             _repo = repo;
             _userDomainService = userDomainService;
             _redis = redis;
-            _roleSettings = roleOptions.Value;
+            _roleConfig = roleOptions.Value;
             _hasher = new PasswordHasher<User>();
         }
 
@@ -80,7 +80,7 @@ namespace WebApplication1.Services
         private async Task CheckIsAdmin(Guid RoleId)
         {
             var role = await _userDomainService.GetRoleByIdAsync(RoleId);
-            if (role != null && role.Name == _roleSettings.Admin)
+            if (role != null && role.Name == _roleConfig.Admin)
                 throw new BadRequestException("You are not allowed to update/delete this user.");
         }
 
@@ -96,15 +96,15 @@ namespace WebApplication1.Services
 
         private async Task  CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
         {
-            var prefix = _roleSettings.User;
+            var prefix = _roleConfig.User;
             var data = await CreateValueForCacheAfterUserUpdate(user);
             await _redis.SetAsync(prefix, userId, data, TimeSpan.FromHours(1));
             
         }
 
-        public async Task<List<AdminUserDto>> GetAllAsync()
+        public async Task<List<AdminUserDto>> GetAllAsync(string? search, bool? isActive, int page, int pageSize)
         {
-            var users = await _repo.GetAllAsync();
+            var users = await _repo.GetAllAsync(search, isActive, page, pageSize);
             return users.Select(u => ToDto(u)).ToList();
         }
 
@@ -123,10 +123,10 @@ namespace WebApplication1.Services
         {
             await _userDomainService.CheckEmailUnique(dto.Email);
 
-            var role = await _userDomainService.GetRoleByNameAsync(_roleSettings.Admin);
+            var role = await _userDomainService.GetRoleByNameAsync(_roleConfig.Admin);
 
             if (role == null)
-                throw new NotFoundException($"Role '{_roleSettings.Admin}' not found.");
+                throw new NotFoundException($"Role '{_roleConfig.Admin}' not found.");
 
             var user = ToEntity(dto, role.RoleId);
 
@@ -168,7 +168,7 @@ namespace WebApplication1.Services
 
             await CheckIsAdmin(user.RoleId);
             await _repo.DeleteAsync(user);
-            var prefix = _roleSettings.User;
+            var prefix = _roleConfig.User;
             await _redis.RemoveAsync(prefix, id);
         }
 

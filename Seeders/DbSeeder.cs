@@ -1,36 +1,36 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using WebApplication1.Configuration;
 using WebApplication1.Entities;
-using WebApplication1.Settings;
 
 namespace WebApplication1.Seeders
 {
     public class DbSeeder
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
         private readonly PasswordHasher<User> _hasher;
-        private readonly RoleSettings _roleSettings;
-        public DbSeeder(ApplicationDbContext context, IOptions<RoleSettings> roleOptions)
+        private readonly RoleConfig _roleConfig;
+        public DbSeeder(AppDbContext context, IOptions<RoleConfig> roleOptions)
         {
             _context = context;
             _hasher = new PasswordHasher<User>();
-            _roleSettings= roleOptions.Value;
+            _roleConfig= roleOptions.Value;
         }
         public async Task SeedAsync()
         {
             if (!await _context.Role.AnyAsync())
             {
                 _context.Role.AddRange(
-                    new Role { RoleId = Guid.NewGuid(), Name = _roleSettings.Admin },
-                    new Role { RoleId = Guid.NewGuid(), Name = _roleSettings.User }
+                    new Role { RoleId = Guid.NewGuid(), Name = _roleConfig.Admin },
+                    new Role { RoleId = Guid.NewGuid(), Name = _roleConfig.User }
                 );
 
                 await _context.SaveChangesAsync();
             }
 
             var adminRole = await _context.Role
-                .FirstOrDefaultAsync(r => r.Name == _roleSettings.Admin);
+                .FirstOrDefaultAsync(r => r.Name == _roleConfig.Admin);
 
             if (adminRole == null)
                 return;

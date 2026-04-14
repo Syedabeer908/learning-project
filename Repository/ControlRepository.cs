@@ -1,14 +1,14 @@
-﻿using WebApplication1.Entities;
-using WebApplication1.Repository.Interfaces;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using WebApplication1.Entities;
+using WebApplication1.Interfaces;
 
-namespace WebApplication1.Repository.Implementations
+namespace WebApplication1.Repository
 {
     public class ControlRepository : IRepository<Control>
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
 
-        public ControlRepository(ApplicationDbContext context)
+        public ControlRepository(AppDbContext context)
         {
             _context = context;
         }

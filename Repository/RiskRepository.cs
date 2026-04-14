@@ -1,14 +1,14 @@
-﻿using WebApplication1.Entities;
-using WebApplication1.Repository.Interfaces;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using WebApplication1.Entities;
+using WebApplication1.Interfaces;
 
-namespace WebApplication1.Repository.Implementations
+namespace WebApplication1.Repository
 {
     public class RiskRepository : IRepository<Risk>
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
 
-        public RiskRepository(ApplicationDbContext context)
+        public RiskRepository(AppDbContext context)
         {
             _context = context;
         }

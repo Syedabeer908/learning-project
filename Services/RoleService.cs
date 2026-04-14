@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Options;
-using WebApplication1.DTOs.Role;
-using WebApplication1.Entities;
-using WebApplication1.Repository.Interfaces;
-using WebApplication1.Settings;
 using WebApplication1.Exceptions;
+using WebApplication1.Entities;
+using WebApplication1.DTOs.Role;
+using WebApplication1.Interfaces;
+using WebApplication1.Configuration;
 
 namespace WebApplication1.Services
 {
@@ -11,13 +11,13 @@ namespace WebApplication1.Services
     {
         private readonly IRoleRepository _repo;
         private readonly IUserRepository _userRepo;
-        private readonly RoleSettings _roleSettings;
+        private readonly RoleConfig _roleConfig;
 
-        public RoleService(IRoleRepository repo, IUserRepository userRepo, IOptions<RoleSettings> roleOptions)
+        public RoleService(IRoleRepository repo, IUserRepository userRepo, IOptions<RoleConfig> roleOptions)
         {
             _repo = repo;
             _userRepo = userRepo;
-            _roleSettings = roleOptions.Value;
+            _roleConfig = roleOptions.Value;
         }
 
         private RoleDto ToDto(Role role)
@@ -77,8 +77,8 @@ namespace WebApplication1.Services
 
         private async Task CheckRoleNotStartupRole(Role role)
         {
-            if (role.Name.Equals(_roleSettings.Admin, StringComparison.OrdinalIgnoreCase) ||
-                role.Name.Equals(_roleSettings.User, StringComparison.OrdinalIgnoreCase))
+            if (role.Name.Equals(_roleConfig.Admin, StringComparison.OrdinalIgnoreCase) ||
+                role.Name.Equals(_roleConfig.User, StringComparison.OrdinalIgnoreCase))
             {
                 throw new BadRequestException($"Cannot delete startup role '{role.Name}'.");
             }
