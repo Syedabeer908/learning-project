@@ -1,4 +1,4 @@
-﻿using WebApplication1.Exceptions;
+﻿using WebApplication1.Common.Exceptions;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
 

@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using StackExchange.Redis;
 using System.Text.Json;
-using WebApplication1.Exceptions;
+using WebApplication1.Common.Exceptions;
 using WebApplication1.Entities;
 using WebApplication1.DTOs.Admin;
 using WebApplication1.Interfaces;
 using WebApplication1.Configuration;
+using WebApplication1.Common.Results;
 
 namespace WebApplication1.Services
 {
@@ -102,16 +102,17 @@ namespace WebApplication1.Services
             
         }
 
-        public async Task<List<AdminUserDto>> GetAllAsync(string? search, bool? isActive, int page, int pageSize)
+        public async Task<ResultT<List<AdminUserDto>>> GetAllAsync(string? search, bool? isActive, Guid? lastId, int page, int pageSize)
         {
-            var users = await _repo.GetAllAsync(search, isActive, page, pageSize);
-            return users.Select(u => ToDto(u)).ToList();
+            var users = await _repo.GetAllAsync(search, isActive, lastId, page, pageSize);
+            var usersDto = users.Select(u => ToDto(u)).ToList();
+            return ResultT<List<AdminUserDto>>.Success(usersDto);    
         }
 
-        public async Task<AdminUserDto?> GetByIdAsync(Guid id)
+        public async Task<ResultT<AdminUserDto?>> GetByIdAsync(Guid id)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
-            return ToDto(user);
+            return ResultT<AdminUserDto?>.Success(ToDto(user));
         }
 
         public async Task<User?> GetByIdInEntityAsync(Guid id)
@@ -119,7 +120,7 @@ namespace WebApplication1.Services
             return await _repo.GetByIdAsync(id);
         }
 
-        public async Task<AdminUserDto> AddAsync(CreateAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> AddAsync(CreateAdminUserDto dto)
         {
             await _userDomainService.CheckEmailUnique(dto.Email);
 
@@ -132,10 +133,10 @@ namespace WebApplication1.Services
 
             await _repo.AddAsync(user);
 
-            return ToDto(user);
+            return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task<AdminUserDto> UpdateAsync(Guid id, UpdateAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> UpdateAsync(Guid id, UpdateAdminUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
@@ -145,10 +146,10 @@ namespace WebApplication1.Services
 
             await _repo.UpdateAsync(user);
 
-            return ToDto(user);
+            return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task<AdminUserDto> PatchAsync(Guid id, PatchAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> PatchAsync(Guid id, PatchAdminUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
@@ -159,10 +160,10 @@ namespace WebApplication1.Services
 
             await _repo.UpdateAsync(user);
 
-            return ToDto(user);
+            return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task<Result> DeleteAsync(Guid id)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
@@ -170,33 +171,37 @@ namespace WebApplication1.Services
             await _repo.DeleteAsync(user);
             var prefix = _roleConfig.User;
             await _redis.RemoveAsync(prefix, id);
+            return Result.Success();
         }
 
-        public async Task DisableUserAsync(Guid id)
+        public async Task<Result> DisableUserAsync(Guid id)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
             user.IsActive = false;
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
+            return Result.Success();
         }
 
-        public async Task EnableUserAsync(Guid id)
+        public async Task<Result> EnableUserAsync(Guid id)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
             user.IsActive = true;
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
+            return Result.Success();
         }
 
-        public async Task ForceUserLogoutAsync(Guid id)
+        public async Task<Result> ForceUserLogoutAsync(Guid id)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
             user.TokenVersion += 1;
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
+            return Result.Success();
         }
     }
 }

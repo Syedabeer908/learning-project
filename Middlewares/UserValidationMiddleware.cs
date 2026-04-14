@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
+using WebApplication1.Common.Responses;
+using WebApplication1.Common.Results;
 using WebApplication1.Entities;
 using WebApplication1.Services;
 
@@ -64,7 +65,8 @@ namespace WebApplication1.Middlewares
 
             if (!Guid.TryParse(userIdClaim, out var userId) || !int.TryParse(tokenVersionClaim, out var tokenVersionFromToken))
             {
-                await UnauthorizedResponse(context, "Invalid token.");
+
+                await UnauthorizedResponse(context, "Invalid Token.");
                 return;
             }
 
@@ -86,22 +88,16 @@ namespace WebApplication1.Middlewares
             await _next(context);
         }
 
-        private static async Task WriteJsonResponse(HttpContext context, string message)
-        {
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new { message = message }));
-        }
-
         private static Task UnauthorizedResponse(HttpContext context, string message)
         {
-            context.Response.StatusCode = 401;
-            return WriteJsonResponse(context, message);
+            var error = ErrorHelper.CreateErrors("Unauthorized", message);
+            return ErrorResponseWriter.WriteErrorAsync(context, 401, error);
         }
 
         private static Task ForbiddenResponse(HttpContext context, string message)
         {
-            context.Response.StatusCode = 403;
-            return WriteJsonResponse(context, message);
+            var error = ErrorHelper.CreateErrors("Forbidden", message);
+            return ErrorResponseWriter.WriteErrorAsync(context, 403, error);
         }
     }
 }

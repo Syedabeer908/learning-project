@@ -30,11 +30,33 @@ namespace WebApplication1.Repository
                                        .FirstOrDefaultAsync(u => u.RoleId == roleId);
         }
 
-        public async Task<List<User>> GetAllAsync(string? search, bool? isActive, int page, int pageSize)
+        public async Task<List<User>> GetAllAsync(string? search = "",
+            bool? isActive = null, Guid? lastId = null, int page = 1, int pageSize = 10)
         {
-            //var query = await _context.User.AsQuerAble
-            return await _context.User
+            var query = _context.User.AsQueryable();
+
+            //if(lastId != null)
+            //{
+            //    query = query.Where(u => u.UserId > lastId);
+            //}
+
+            if (isActive != null) 
+            {
+                query = query.Where(u => u.IsActive == isActive);
+            }
+
+            if(!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                query = query.Where(u => u.Username.ToLower().Contains(search) ||
+                    u.Email.ToLower().Contains(search) ||
+                    u.Role.Name.ToLower().Contains(search));
+            }
+
+            return await query
                 .Include(u => u.Role)
+                .OrderBy(b => b.Id)
+                .Take(pageSize)
                 .ToListAsync();
         }
 
