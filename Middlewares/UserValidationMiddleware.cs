@@ -44,6 +44,7 @@ namespace WebApplication1.Middlewares
             var json = JsonSerializer.Serialize(new
             {
                 IsActive = user.IsActive,
+                IsDeleted = user.IsDeleted,
                 TokenVersion = user.TokenVersion
             });
 
@@ -65,7 +66,6 @@ namespace WebApplication1.Middlewares
 
             if (!Guid.TryParse(userIdClaim, out var userId) || !int.TryParse(tokenVersionClaim, out var tokenVersionFromToken))
             {
-
                 await UnauthorizedResponse(context, "Invalid Token.");
                 return;
             }
@@ -73,7 +73,7 @@ namespace WebApplication1.Middlewares
             var prefix = context.User.FindFirst(ClaimTypes.Role)?.Value ?? "User";
             var user = await GetUserWithCacheAsync(userId, prefix);
 
-            if (user == null || !user.IsActive)
+            if (user == null || !user.IsActive || user.IsDeleted)
             {
                 await ForbiddenResponse(context, "You are not allowed to access this resource.");
                 return;
@@ -85,6 +85,7 @@ namespace WebApplication1.Middlewares
                 return;
             }
 
+            context.Items["UserId"] = userId;
             await _next(context);
         }
 

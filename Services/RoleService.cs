@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
 using WebApplication1.Common.Exceptions;
+using WebApplication1.Common.Results;
+using WebApplication1.Common.Constants;
 using WebApplication1.Entities;
 using WebApplication1.DTOs.Role;
 using WebApplication1.Interfaces;
-using WebApplication1.Configuration;
+using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
@@ -11,13 +13,16 @@ namespace WebApplication1.Services
     {
         private readonly IRoleRepository _repo;
         private readonly IUserRepository _userRepo;
-        private readonly RoleConfig _roleConfig;
+        private readonly RoleConstants _roleConstants;
+        private readonly SoftDeleteService _softDeleteService;  
 
-        public RoleService(IRoleRepository repo, IUserRepository userRepo, IOptions<RoleConfig> roleOptions)
+        public RoleService(IRoleRepository repo, IUserRepository userRepo,
+            IOptions<RoleConstants> roleOptions, SoftDeleteService softDeleteService)
         {
             _repo = repo;
             _userRepo = userRepo;
-            _roleConfig = roleOptions.Value;
+            _roleConstants = roleOptions.Value;
+            _softDeleteService = softDeleteService;
         }
 
         private RoleDto ToDto(Role role)
@@ -29,24 +34,29 @@ namespace WebApplication1.Services
             };
         }
 
-        private Role ToEntity(CreateRoleDto dto)
+        private Role ToEntity(Guid userId, CreateRoleDto dto)
         {
             return new Role
             {
                 RoleId = Guid.NewGuid(),
-                Name = dto.RoleName
+                Name = dto.RoleName,
+                CreatedBy = userId
             };
         }
 
-        private void UpdateEntity(Role role, UpdateRoleDto dto)
+        private void UpdateEntity(Role role, Guid userId, UpdateRoleDto dto)
         {
             role.Name = dto.RoleName;
+            role.LastUpdatedAt = DateTime.UtcNow;
+            role.LastUpdatedBy = userId;
         }
 
-        private void PatchEntity(Role role, PatchRoleDto dto)
+        private void PatchEntity(Role role, Guid userId, PatchRoleDto dto)
         {
             if (!string.IsNullOrEmpty(dto.RoleName))
                 role.Name = dto.RoleName;
+            role.LastUpdatedAt = DateTime.UtcNow;
+            role.LastUpdatedBy = userId;
         }
 
         private async Task<Role> CheckRoleExistAndGet(Guid id)
@@ -77,69 +87,79 @@ namespace WebApplication1.Services
 
         private async Task CheckRoleNotStartupRole(Role role)
         {
-            if (role.Name.Equals(_roleConfig.Admin, StringComparison.OrdinalIgnoreCase) ||
-                role.Name.Equals(_roleConfig.User, StringComparison.OrdinalIgnoreCase))
+            if (role.Name.Equals(_roleConstants.Admin, StringComparison.OrdinalIgnoreCase) ||
+                role.Name.Equals(_roleConstants.User, StringComparison.OrdinalIgnoreCase))
             {
                 throw new BadRequestException($"Cannot delete startup role '{role.Name}'.");
             }
             await CheckRoleInUse(role.RoleId);
         }
 
-        public async Task<List<RoleDto>> GetAllAsync()
+        public async Task<ResultT<List<RoleDto>>> GetAllAsync()
         {
             var roles = await _repo.GetAllAsync();
-            return roles.Select(r => ToDto(r)).ToList();
+            var roleDtos = roles.Select(r => ToDto(r)).ToList();
+            return ResultT<List<RoleDto>>.Success(roleDtos);
         }
 
-        public async Task<RoleDto> GetByIdAsync(Guid id)
+        public async Task<ResultT<RoleDto>> GetByIdAsync(Guid id)
         {
             var role = await CheckRoleExistAndGet(id);
-            return ToDto(role);
+            return ResultT<RoleDto>.Success(ToDto(role));
         }
 
-        public async Task<RoleDto> AddAsync(CreateRoleDto dto)
+        public async Task<ResultT<RoleDto>> AddAsync(Guid userId, CreateRoleDto dto)
         {
             await CheckRoleNameUnique(dto.RoleName);
-            var role = ToEntity(dto);
+            var role = ToEntity(userId, dto);
 
             await _repo.AddAsync(role);
 
-            return ToDto(role);
+            return ResultT<RoleDto>.Success(ToDto(role));
         }
 
-        public async Task<RoleDto> UpdateAsync(Guid id, UpdateRoleDto dto)
+        public async Task<ResultT<RoleDto>> UpdateAsync(Guid id, Guid userId, UpdateRoleDto dto)
         {
             var role = await CheckRoleExistAndGet(id);
 
             await CheckRoleNameUnique(dto.RoleName, role.RoleId);
 
-            UpdateEntity(role, dto);
+            UpdateEntity(role, userId, dto);
 
             await _repo.UpdateAsync(role);
 
-            return ToDto(role);
+            return ResultT<RoleDto>.Success(ToDto(role));
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var role = await CheckRoleExistAndGet(id);
 
             await CheckRoleNotStartupRole(role);
 
-            await _repo.DeleteAsync(role);
+            await _softDeleteService.DeleteAsync<Role>(id, userId);
+
+            return Result.Success();
         }
 
-        public async Task<RoleDto> PatchAsync(Guid id, PatchRoleDto dto)
+        public async Task<Result> RestoreAsync(Guid id, Guid userId)
+        {
+            var role = await CheckRoleExistAndGet(id);
+            await _softDeleteService.RestoreAsync<Role>(id, userId);
+            return Result.Success();
+        }
+
+        public async Task<ResultT<RoleDto>> PatchAsync(Guid id, Guid userId, PatchRoleDto dto)
         {
             var role = await CheckRoleExistAndGet(id);
 
             if (!string.IsNullOrEmpty(dto.RoleName))
                 await CheckRoleNameUnique(dto.RoleName, role.RoleId);
 
-            PatchEntity(role, dto);
+            PatchEntity(role, userId, dto);
 
             await _repo.UpdateAsync(role);
-            return ToDto(role);
+            return ResultT<RoleDto>.Success(ToDto(role));
         }
     }
 }

@@ -2,16 +2,20 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
+using Serilog;
 using System.Text;
 using StackExchange.Redis;
+using System.Security.Claims;
 using WebApplication1.Seeders;
 using WebApplication1.Middlewares;
 using WebApplication1.Entities;
 using WebApplication1.Services;
 using WebApplication1.Interfaces;
 using WebApplication1.Repository;
-using WebApplication1.Configuration;
+using WebApplication1.Common.Constants;
+using WebApplication1.Data.SoftDelete.Cascade;
+using WebApplication1.Data.SoftDelete.Executor;
+using WebApplication1.Data.SoftDelete.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,17 +34,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register Redis ConnectionMultiplexer (Singleton)
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
-    var configuration = builder.Configuration.GetSection("Redis:ConnectionString")?.Value ?? "localhost:6379";
-    return ConnectionMultiplexer.Connect(configuration);
+    //var configuration = "localhost:6376";
+    var configuration = builder.Configuration.GetSection("Redis:ConnectionString").Value ?? "localhost:6379";
+    var options = ConfigurationOptions.Parse(configuration);
+    options.AbortOnConnectFail = false; 
+
+    return ConnectionMultiplexer.Connect(options);
 });
 
-// Adding JwtSettings configuration
-builder.Services.Configure<JwtConfig>(
+// Adding AuthConstants
+builder.Services.Configure<AuthConstants>(
     builder.Configuration.GetSection("SecretKeys:Jwt")
 );
 
-// Adding StartupRoleSettings configuration
-builder.Services.Configure<RoleConfig>(
+// Adding RoleConstants
+builder.Services.Configure<RoleConstants>(
     builder.Configuration.GetSection("StartUpRole"));
 
 // Adding Authorization policies
@@ -68,12 +76,16 @@ builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ControlService>();
 builder.Services.AddScoped<RiskControlService>();
 builder.Services.AddScoped<RedisService>();
-builder.Services.AddScoped<RoleConfig>();
+builder.Services.AddScoped<RoleConstants>();
+
+builder.Services.AddScoped<SoftDeleteExecutor>();
+builder.Services.AddScoped<CascadePlanBuilder>();
+builder.Services.AddScoped<SoftDeleteService>();
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration
     .GetSection("SecretKeys:Jwt")
-    .Get<JwtConfig>();
+    .Get<AuthConstants>();
 
 var jwtSettingsKey = jwtSettings?.Key ?? "3d7tt#JbeX!&FY3!%e+XQE8xtrHFcpqc";
 
@@ -132,10 +144,19 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "Logs/log-.txt",
+        rollingInterval: RollingInterval.Day, // new file every day
+        retainedFileCountLimit: 7             // keep last 7 days
+    )
+    .CreateLogger();
 
+// Replace default logging
+builder.Host.UseSerilog();
 
 var app = builder.Build();
 
@@ -143,8 +164,12 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleConfig>>();
+
+    context.Database.Migrate();
+
+    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleConstants>>();
     var seeder = new DbSeeder(context, roleSettings);
+
     await seeder.SeedAsync();
 }
 

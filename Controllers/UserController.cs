@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.User;
 using WebApplication1.Services;
 
@@ -20,15 +21,17 @@ namespace WebApplication1.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateUserDto dto)
         {
-            var updatedUser = await _service.UpdateAsync(id, dto);
-            return Ok(updatedUser);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.UpdateAsync(id, userId, dto);
+            return Ok(result);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchUserDto dto)
         {
-            var patchedUser = await _service.PatchAsync(id, dto);
-            return Ok(patchedUser);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.PatchAsync(id, userId, dto);
+            return Ok(result);
         }
     }
 }

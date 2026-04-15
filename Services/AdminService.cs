@@ -2,29 +2,33 @@
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using WebApplication1.Common.Exceptions;
+using WebApplication1.Common.Results;
+using WebApplication1.Common.Constants;
 using WebApplication1.Entities;
 using WebApplication1.DTOs.Admin;
 using WebApplication1.Interfaces;
-using WebApplication1.Configuration;
-using WebApplication1.Common.Results;
+using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
     public class AdminService
     {
         private readonly IUserRepository _repo;
-        
+        private readonly SoftDeleteService _softDeleteService;
         private readonly UserDomainService _userDomainService;
         private readonly RedisService _redis;
-        private readonly RoleConfig _roleConfig;
+        private readonly RoleConstants _roleConstants;
         private readonly PasswordHasher<User> _hasher;
 
-        public AdminService(IUserRepository repo, UserDomainService userDomainService, RedisService redis, IOptions<RoleConfig> roleOptions)
+        public AdminService(IUserRepository repo, SoftDeleteService softDeleteService,
+            UserDomainService userDomainService,
+            RedisService redis, IOptions<RoleConstants> roleOptions)
         {
             _repo = repo;
+            _softDeleteService = softDeleteService;
             _userDomainService = userDomainService;
             _redis = redis;
-            _roleConfig = roleOptions.Value;
+            _roleConstants = roleOptions.Value;
             _hasher = new PasswordHasher<User>();
         }
 
@@ -41,7 +45,7 @@ namespace WebApplication1.Services
             };
         }
 
-        private User ToEntity(CreateAdminUserDto dto, Guid roleId)
+        private User ToEntity(Guid userId, CreateAdminUserDto dto)
         {
             var user = new User
             {
@@ -49,23 +53,27 @@ namespace WebApplication1.Services
                 Username = dto.Username,
                 Email = dto.Email,
                 PasswordHash = dto.Password,
-                RoleId = roleId
+                RoleId = dto.RoleId,
+                CreatedBy = userId
             };
 
             user.PasswordHash = _hasher.HashPassword(user, dto.Password);
             return user;
         }
 
-        private void UpdateEntity(User user, UpdateAdminUserDto dto)
+        private void UpdateEntity(User user, Guid userId, UpdateAdminUserDto dto)
         {
             user.Username = dto.Username;
             user.Email = dto.Email;
-
+            
             if (!string.IsNullOrWhiteSpace(dto.Password))
                 user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
         }
 
-        private void PatchEntity(User user, PatchAdminUserDto dto)
+        private void PatchEntity(User user, Guid userId, PatchAdminUserDto dto)
         {
             if (!string.IsNullOrEmpty(dto.Username))
                 user.Username = dto.Username;
@@ -75,12 +83,15 @@ namespace WebApplication1.Services
 
             if (!string.IsNullOrEmpty(dto.Password))
                 user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
         }
 
         private async Task CheckIsAdmin(Guid RoleId)
         {
             var role = await _userDomainService.GetRoleByIdAsync(RoleId);
-            if (role != null && role.Name == _roleConfig.Admin)
+            if (role != null && role.Name == _roleConstants.Admin)
                 throw new BadRequestException("You are not allowed to update/delete this user.");
         }
 
@@ -89,6 +100,7 @@ namespace WebApplication1.Services
             var json = JsonSerializer.Serialize(new
             {
                 IsActive = user.IsActive,
+                IsDeleted = user.IsDeleted,
                 TokenVersion = user.TokenVersion
             });
             return Task.FromResult(json);
@@ -96,7 +108,7 @@ namespace WebApplication1.Services
 
         private async Task  CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
         {
-            var prefix = _roleConfig.User;
+            var prefix = _roleConstants.User;
             var data = await CreateValueForCacheAfterUserUpdate(user);
             await _redis.SetAsync(prefix, userId, data, TimeSpan.FromHours(1));
             
@@ -105,8 +117,8 @@ namespace WebApplication1.Services
         public async Task<ResultT<List<AdminUserDto>>> GetAllAsync(string? search, bool? isActive, Guid? lastId, int page, int pageSize)
         {
             var users = await _repo.GetAllAsync(search, isActive, lastId, page, pageSize);
-            var usersDto = users.Select(u => ToDto(u)).ToList();
-            return ResultT<List<AdminUserDto>>.Success(usersDto);    
+            var usersDtos = users.Select(u => ToDto(u)).ToList();
+            return ResultT<List<AdminUserDto>>.Success(usersDtos);    
         }
 
         public async Task<ResultT<AdminUserDto?>> GetByIdAsync(Guid id)
@@ -120,85 +132,108 @@ namespace WebApplication1.Services
             return await _repo.GetByIdAsync(id);
         }
 
-        public async Task<ResultT<AdminUserDto>> AddAsync(CreateAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> AddAsync(Guid userId, CreateAdminUserDto dto)
         {
             await _userDomainService.CheckEmailUnique(dto.Email);
 
-            var role = await _userDomainService.GetRoleByNameAsync(_roleConfig.Admin);
+            var role = await _userDomainService.GetRoleByIdAsync(dto.RoleId);
 
             if (role == null)
-                throw new NotFoundException($"Role '{_roleConfig.Admin}' not found.");
+                throw new NotFoundException($"RoleId '{dto.RoleId}' not found.");
 
-            var user = ToEntity(dto, role.RoleId);
+            var user = ToEntity(userId,dto);
 
             await _repo.AddAsync(user);
 
             return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task<ResultT<AdminUserDto>> UpdateAsync(Guid id, UpdateAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> UpdateAsync(Guid id, Guid userId, UpdateAdminUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            UpdateEntity(user, dto);
-
+            UpdateEntity(user, userId, dto);
+            
             await _repo.UpdateAsync(user);
 
             return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task<ResultT<AdminUserDto>> PatchAsync(Guid id, PatchAdminUserDto dto)
+        public async Task<ResultT<AdminUserDto>> PatchAsync(Guid id, Guid userId, PatchAdminUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             if (!string.IsNullOrEmpty(dto.Email))
                 await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            PatchEntity(user, dto);
+            PatchEntity(user, userId, dto);
 
             await _repo.UpdateAsync(user);
 
             return ResultT<AdminUserDto>.Success(ToDto(user));
         }
 
-        public async Task<Result> DeleteAsync(Guid id)
+        public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await CheckIsAdmin(user.RoleId);
-            await _repo.DeleteAsync(user);
-            var prefix = _roleConfig.User;
-            await _redis.RemoveAsync(prefix, id);
+            await _softDeleteService.DeleteAsync<User>(id, userId);
+            user.IsDeleted = true; 
+            await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();
         }
 
-        public async Task<Result> DisableUserAsync(Guid id)
+        public async Task<Result> RestoreAsync(Guid id, Guid userId)
+        {
+            var user = await _userDomainService.CheckUserExistAndGet(id);
+
+            await CheckIsAdmin(user.RoleId);
+            await _softDeleteService.RestoreAsync<User>(id, userId);
+            user.IsDeleted = false;
+            await CreateOrUpdateCacheAfterUserUpdate(id, user);
+            return Result.Success();
+        }
+
+        public async Task<Result> DisableUserAsync(Guid id, Guid userId)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
+
             user.IsActive = false;
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;  
+            
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();
         }
 
-        public async Task<Result> EnableUserAsync(Guid id)
+        public async Task<Result> EnableUserAsync(Guid id, Guid userId)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
+
             user.IsActive = true;
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
+
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();
         }
 
-        public async Task<Result> ForceUserLogoutAsync(Guid id)
+        public async Task<Result> ForceUserLogoutAsync(Guid id, Guid userId)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
             await CheckIsAdmin(user.RoleId);
+
             user.TokenVersion += 1;
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
+
             await _repo.UpdateAsync(user);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();

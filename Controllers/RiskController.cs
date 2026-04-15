@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.Risk;
 using WebApplication1.Services;
 
@@ -20,43 +21,57 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAsync()
         {
-            var risks = await _service.GetAllAsync();
-            return Ok(risks);
+            var result = await _service.GetAllAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetRiskById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            var risk = await _service.GetByIdAsync(id);
-            return Ok(risk);
+            var result = await _service.GetByIdAsync(id);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRiskDto dto)
         {
-            var createdRisk = await _service.AddAsync(dto);
-            return CreatedAtRoute("GetRiskById", new { id = createdRisk.RiskId }, createdRisk);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.AddAsync(userId, dto);
+            if(result.Result == null)
+                return BadRequest(result);
+            return CreatedAtRoute("GetRiskById", new { id = result.Result.RiskId }, result);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRiskDto dto)
         {
-            var updatedRisk = await _service.UpdateAsync(id, dto);
-            return Ok(updatedRisk);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.UpdateAsync(id, userId, dto);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return Ok(new { message = "Risk deleted" });
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.DeleteAsync(id, userId);
+            return Ok(result);
+        }
+
+        [HttpPatch("{id}/restore")]
+        public async Task<IActionResult> RestoreAsync(Guid id)
+        {
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.RestoreAsync(id, userId);
+            return Ok(result);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRiskDto dto)
         {
-            var PatchRisk = await _service.PatchAsync(id, dto);
-            return Ok(PatchRisk);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.PatchAsync(id, userId, dto);
+            return Ok(result);
         }
     }
 }

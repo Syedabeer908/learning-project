@@ -14,17 +14,10 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<RiskControl>(entity =>
+        modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasOne(rc => rc.Risk)
-                  .WithMany(r => r.RiskControl)
-                  .HasForeignKey(rc => rc.RiskId)
-                  .HasPrincipalKey(r => r.RiskId);
-
-            entity.HasOne(rc => rc.Control)
-                  .WithMany(c => c.RiskControl)
-                  .HasForeignKey(rc => rc.ControlId)
-                  .HasPrincipalKey(r => r.ControlId);
+            entity.HasIndex(r => r.Name)
+                .IsUnique();
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -39,10 +32,43 @@ public class AppDbContext : DbContext
                   .IsUnique();
         });
 
-        modelBuilder.Entity<Role>( entity =>
-        {     
-            entity.HasIndex(r => r.Name)
-                .IsUnique();
+        modelBuilder.Entity<Risk>(entity =>
+        {
+            entity.HasOne(u => u.User)
+                  .WithMany(r => r.Risks)
+                  .HasForeignKey(u => u.UserId)
+                  .HasPrincipalKey(u => u.UserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<Control>(entity =>
+        {
+            entity.HasOne(u => u.User)
+                  .WithMany(c => c.Controls)
+                  .HasForeignKey(u => u.UserId)
+                  .HasPrincipalKey(u => u.UserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<RiskControl>(entity =>
+        {
+            entity.HasOne(u => u.User)
+                  .WithMany(r => r.RiskControls)
+                  .HasForeignKey(u => u.UserId)
+                  .HasPrincipalKey(u => u.UserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(r => r.Risk)
+                  .WithMany(rc => rc.RiskControls)
+                  .HasForeignKey(r => r.RiskId)
+                  .HasPrincipalKey(r => r.RiskId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(c => c.Control)
+                  .WithMany(rc => rc.RiskControls)
+                  .HasForeignKey(c => c.ControlId)
+                  .HasPrincipalKey(c => c.ControlId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

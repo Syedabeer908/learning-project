@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.Control;
 using WebApplication1.Services;
 
@@ -20,43 +21,57 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAsync()
         {
-            var controls = await _service.GetAllAsync();
-            return Ok(controls);
+            var result = await _service.GetAllAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetControlById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            var control = await _service.GetByIdAsync(id);
-            return Ok(control);
+            var result = await _service.GetByIdAsync(id);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateControlDto dto)
         {
-            var createdControl = await _service.AddAsync(dto);
-            return CreatedAtRoute("GetControlById", new { id = createdControl.ControlId }, createdControl);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.AddAsync(userId, dto);
+            if (result.Result == null)
+                return BadRequest(result);
+            return CreatedAtRoute("GetControlById", new { id = result.Result.ControlId }, result);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateControlDto dto)
         {
-            var updatedControl = await _service.UpdateAsync(id, dto);
-            return Ok(updatedControl);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.UpdateAsync(id, userId, dto);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return Ok(new { message = "Control deleted" });
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.DeleteAsync(id, userId);
+            return Ok(result);
+        }
+
+        [HttpPatch("{id}/restore")]
+        public async Task<IActionResult> RestoreAsync(Guid id)
+        {
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.RestoreAsync(id, userId);
+            return Ok(result);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchControlDto dto)
         {
-            var patchedControl = await _service.PatchAsync(id, dto);
-            return Ok(patchedControl);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.PatchAsync(id, userId, dto);
+            return Ok(result);
         }
     }
 }

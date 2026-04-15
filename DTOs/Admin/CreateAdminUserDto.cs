@@ -5,5 +5,7 @@ namespace WebApplication1.DTOs.Admin
 {
     public class CreateAdminUserDto : AuthRegisterDto
     {
+        [Required]
+        public Guid RoleId { get; set; }
     }
 }

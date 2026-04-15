@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SQLitePCL;
-using System.Security.Claims;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.Admin;
 using WebApplication1.Services;
 
@@ -40,7 +39,8 @@ namespace WebApplication1.Controllers
         [HttpPost("users")]
         public async Task<IActionResult> AddAsync([FromBody] CreateAdminUserDto dto)
         {
-            var result = await _service.AddAsync(dto);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.AddAsync(userId, dto);
             if (result.Result == null)
                 return BadRequest(result);
 
@@ -54,42 +54,56 @@ namespace WebApplication1.Controllers
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateAdminUserDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.UpdateAsync(id, userId, dto);
             return Ok(result);
         }
 
         [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            var result = await _service.DeleteAsync(id);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.DeleteAsync(id, userId);
+            return Ok(result);
+        }
+
+        [HttpPatch("users/{id}/restore")]
+        public async Task<IActionResult> RestoreAsync(Guid id)
+        {
+            var userId = HttpContext.GetUserId();
+            var result = await _service.RestoreAsync(id, userId);
             return Ok(result);
         }
 
         [HttpPatch("users/{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchAdminUserDto dto)
         {
-            var result = await _service.PatchAsync(id, dto);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.PatchAsync(id, userId, dto);
             return Ok(result);
         }
 
         [HttpPatch("users/{id}/disable")]
         public async Task<IActionResult> DisableUserAsync(Guid id)
         {
-            var result = await _service.DisableUserAsync(id);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.DisableUserAsync(id, userId);
             return Ok(result);
         }
 
         [HttpPatch("users/{id}/enable")]
         public async Task<IActionResult> EnableUserAsync(Guid id)
         {
-            var result = await _service.EnableUserAsync(id);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.EnableUserAsync(id, userId);
             return Ok(result);
         }
 
         [HttpPatch("users/{id}/logout")]
         public async Task<IActionResult> ForceUserLogoutAsync(Guid id)
         {
-            var result = await _service.ForceUserLogoutAsync(id);
+            var userId = HttpContext.GetUserId();
+            var result = await _service.ForceUserLogoutAsync(id, userId);
             return Ok(result);
         }
     }

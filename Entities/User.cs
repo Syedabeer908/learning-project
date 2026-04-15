@@ -3,11 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplication1.Entities
 {
-    public class User
+    public class User : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
-
         [Required]
         public Guid UserId { get; set; }
 
@@ -30,5 +27,9 @@ namespace WebApplication1.Entities
         [Required]
         public Guid RoleId { get; set; }
         public Role Role { get; set; } = null!;
+
+        public ICollection<Risk> Risks { get; set; } = new List<Risk>();
+        public ICollection<Control> Controls { get; set; } = new List<Control>();
+        public ICollection<RiskControl> RiskControls { get; set; } = new List<RiskControl>();
     }
 }

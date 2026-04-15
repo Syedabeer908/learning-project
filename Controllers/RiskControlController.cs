@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.RiskControl;
 using WebApplication1.Services;
 
@@ -20,43 +21,58 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAsync()
         {
-            var riskControls = await _service.GetAllAsync();
-            return Ok(riskControls);
+            var result = await _service.GetAllAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetRiskControlById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            var riskControl = await _service.GetByIdAsync(id);
-            return Ok(riskControl);
+            var result = await _service.GetByIdAsync(id);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRiskControlDto dto)
         {
-            var created = await _service.AddAsync(dto);
-            return CreatedAtRoute("GetRiskControlById", new { id = created.RiskControlId }, created);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.AddAsync(userId, dto);
+            if (result.Result == null)
+                return BadRequest(result);
+
+            return CreatedAtRoute("GetRiskControlById", new { id = result.Result.RiskControlId }, result);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRiskControlDto dto)
         {
-            var updated = await _service.UpdateAsync(id, dto);
-            return Ok(updated);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.UpdateAsync(id, userId, dto);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return Ok(new { message = "RiskControl deleted" });
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.DeleteAsync(id, userId);
+            return Ok(result);
+        }
+
+        [HttpPatch("{id}/restore")]
+        public async Task<IActionResult> RestoreAsync(Guid id)
+        {
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.RestoreAsync(id, userId);
+            return Ok(result);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRiskControlDto dto)
         {
-            var patched = await _service.PatchAsync(id, dto);
-            return Ok(patched);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.PatchAsync(id, userId, dto);
+            return Ok(result);
         }
     }
 }

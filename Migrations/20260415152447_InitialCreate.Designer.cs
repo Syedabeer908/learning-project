@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260415152447_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,7 +43,33 @@ namespace WebApplication1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Control");
                 });
@@ -53,6 +82,27 @@ namespace WebApplication1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("RiskDescription")
                         .IsRequired()
                         .HasColumnType("nvarchar(1000)");
@@ -64,7 +114,12 @@ namespace WebApplication1.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Risk");
                 });
@@ -83,10 +138,34 @@ namespace WebApplication1.Migrations
                     b.Property<int>("ControlMethod")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("RiskControlId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("RiskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -94,6 +173,8 @@ namespace WebApplication1.Migrations
                     b.HasIndex("ControlId");
 
                     b.HasIndex("RiskId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("RiskControl");
                 });
@@ -105,6 +186,27 @@ namespace WebApplication1.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -129,6 +231,18 @@ namespace WebApplication1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -136,6 +250,15 @@ namespace WebApplication1.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -165,25 +288,58 @@ namespace WebApplication1.Migrations
                     b.ToTable("User");
                 });
 
+            modelBuilder.Entity("WebApplication1.Entities.Control", b =>
+                {
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("Controls")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WebApplication1.Entities.Risk", b =>
+                {
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("Risks")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WebApplication1.Entities.RiskControl", b =>
                 {
                     b.HasOne("WebApplication1.Entities.Control", "Control")
-                        .WithMany("RiskControl")
+                        .WithMany("RiskControls")
                         .HasForeignKey("ControlId")
                         .HasPrincipalKey("ControlId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("WebApplication1.Entities.Risk", "Risk")
-                        .WithMany("RiskControl")
+                        .WithMany("RiskControls")
                         .HasForeignKey("RiskId")
                         .HasPrincipalKey("RiskId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("RiskControls")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Control");
 
                     b.Navigation("Risk");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("WebApplication1.Entities.User", b =>
@@ -200,17 +356,26 @@ namespace WebApplication1.Migrations
 
             modelBuilder.Entity("WebApplication1.Entities.Control", b =>
                 {
-                    b.Navigation("RiskControl");
+                    b.Navigation("RiskControls");
                 });
 
             modelBuilder.Entity("WebApplication1.Entities.Risk", b =>
                 {
-                    b.Navigation("RiskControl");
+                    b.Navigation("RiskControls");
                 });
 
             modelBuilder.Entity("WebApplication1.Entities.Role", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("WebApplication1.Entities.User", b =>
+                {
+                    b.Navigation("Controls");
+
+                    b.Navigation("RiskControls");
+
+                    b.Navigation("Risks");
                 });
 #pragma warning restore 612, 618
         }

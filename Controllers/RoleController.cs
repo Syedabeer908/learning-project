@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.Role;
 using WebApplication1.Services;
 
@@ -20,43 +21,57 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAsync()
         {
-            var roles = await _service.GetAllAsync();
-            return Ok(roles);
+            var result = await _service.GetAllAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetRoleById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            var role = await _service.GetByIdAsync(id);
-            return Ok(role);
+            var result = await _service.GetByIdAsync(id);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRoleDto dto)
         {
-            var createdRole = await _service.AddAsync(dto);
-            return CreatedAtRoute("GetRoleById", new { id = createdRole.RoleId }, createdRole);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.AddAsync(userId, dto);
+            if (result.Result == null)
+                return BadRequest(result);
+            return CreatedAtRoute("GetRoleById", new { id = result.Result.RoleId }, result);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRoleDto dto)
         {
-            var updatedRole = await _service.UpdateAsync(id, dto);
-            return Ok(updatedRole);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.UpdateAsync(id, userId, dto);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return Ok(new { message = "Role deleted" });
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.DeleteAsync(id, userId);
+            return Ok(result);
+        }
+
+        [HttpPatch("{id}/restore")]
+        public async Task<IActionResult> RestoreAsync(Guid id)
+        {
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.RestoreAsync(id, userId);
+            return Ok(result);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRoleDto dto)
         {
-            var PatchRole = await _service.PatchAsync(id, dto);
-            return Ok(PatchRole);
+            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var result = await _service.PatchAsync(id, userId, dto);
+            return Ok(result);
         }
     }
 }

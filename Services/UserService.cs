@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using WebApplication1.Common.Results;
 using WebApplication1.DTOs.User;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
@@ -28,16 +29,19 @@ namespace WebApplication1.Services
             };
         }
 
-        private void UpdateEntity(User user, UpdateUserDto dto)
+        private void UpdateEntity(User user, Guid userId, UpdateUserDto dto)
         {
             user.Username = dto.Username;
             user.Email = dto.Email;
 
             if (!string.IsNullOrWhiteSpace(dto.Password))
                 user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
         }
 
-        private void PatchEntity(User user, PatchUserDto dto)
+        private void PatchEntity(User user, Guid userId, PatchUserDto dto)
         {
             if (!string.IsNullOrEmpty(dto.Username))
                 user.Username = dto.Username;
@@ -45,33 +49,36 @@ namespace WebApplication1.Services
                 user.Email = dto.Email;
             if (!string.IsNullOrEmpty(dto.Password))
                 user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+
+            user.LastUpdatedAt = DateTime.UtcNow;
+            user.LastUpdatedBy = userId;
         }
 
-        public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDto dto)
+        public async Task<ResultT<UserDto>> UpdateAsync(Guid id, Guid userId, UpdateUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            UpdateEntity(user, dto);
+            UpdateEntity(user, userId, dto);
 
             await _repo.UpdateAsync(user);
 
-            return ToDto(user);
+            return ResultT<UserDto>.Success(ToDto(user));
         }
 
-        public async Task<UserDto> PatchAsync(Guid id, PatchUserDto dto)
+        public async Task<ResultT<UserDto>> PatchAsync(Guid id, Guid userId, PatchUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             if (!string.IsNullOrEmpty(dto.Email))
                 await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            PatchEntity(user, dto);
+            PatchEntity(user, userId, dto);
 
             await _repo.UpdateAsync(user);
 
-            return ToDto(user);
+            return ResultT<UserDto>.Success(ToDto(user));
         }
     }
 }

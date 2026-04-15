@@ -3,11 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplication1.Entities
 {
-    public class Role
+    public class Role : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
-
         [Required]
         public Guid RoleId { get; set; }
 

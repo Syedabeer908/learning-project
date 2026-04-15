@@ -1,8 +1,10 @@
 ﻿using WebApplication1.Common.Exceptions;
+using WebApplication1.Common.Results;
 using WebApplication1.Entities;
 using WebApplication1.Entities.Enums;
 using WebApplication1.DTOs.RiskControl;
 using WebApplication1.Interfaces;
+using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
@@ -11,13 +13,15 @@ namespace WebApplication1.Services
         private readonly IRepository<RiskControl> _repo;
         private readonly IRepository<Risk> _riskRepo;
         private readonly IRepository<Control> _controlRepo;
+        private readonly SoftDeleteService _softDeleteService;
 
         public RiskControlService(IRepository<RiskControl> repo, IRepository<Risk> riskRepo,
-                                  IRepository<Control> controlRepo)
+                                  IRepository<Control> controlRepo, SoftDeleteService softDeleteService)
         {
             _repo = repo;
             _riskRepo = riskRepo;
             _controlRepo = controlRepo;
+            _softDeleteService = softDeleteService;
         }
 
         private RiskControlDto ToDto(RiskControl riskControl)
@@ -31,7 +35,7 @@ namespace WebApplication1.Services
             };
         }
 
-        private async Task<RiskControl> ToEntity(CreateRiskControlDto dto)
+        private async Task<RiskControl> ToEntity(Guid userId, CreateRiskControlDto dto)
         {
             var risk = await _riskRepo.GetByIdAsync(dto.RiskId);
             if (risk == null) throw new NotFoundException($"Risk with GUID {dto.RiskId} not found.");
@@ -43,22 +47,27 @@ namespace WebApplication1.Services
             return new RiskControl
             {
                 RiskControlId = Guid.NewGuid(),
+                UserId = userId,
                 RiskId = risk.RiskId,
                 ControlId = control.ControlId,
-                ControlMethod = ParseControlMethod(dto.ControlMethod)
+                ControlMethod = ParseControlMethod(dto.ControlMethod),
+                CreatedBy = userId
             };
         }
 
-        private void UpdateEntity(RiskControl riskControl, UpdateRiskControlDto dto)
+        private void UpdateEntity(RiskControl riskControl, Guid userId, UpdateRiskControlDto dto)
         {
             riskControl.ControlMethod = ParseControlMethod(dto.ControlMethod);
-;
+            riskControl.LastUpdatedAt = DateTime.UtcNow;
+            riskControl.LastUpdatedBy = userId;
         }
 
-        private async Task PatchEntity(RiskControl riskControl, PatchRiskControlDto dto)
+        private async Task PatchEntity(RiskControl riskControl, Guid userId, PatchRiskControlDto dto)
         {
             if (!string.IsNullOrEmpty(dto.ControlMethod))
                 riskControl.ControlMethod = ParseControlMethod(dto.ControlMethod);
+            riskControl.LastUpdatedAt = DateTime.UtcNow;
+            riskControl.LastUpdatedBy = userId;
         }
 
         private ControlMethod ParseControlMethod(string method)
@@ -83,47 +92,56 @@ namespace WebApplication1.Services
             return riskControl;
         }
 
-        public async Task<List<RiskControlDto>> GetAllAsync()
+        public async Task<ResultT<List<RiskControlDto>>> GetAllAsync()
         {
             var riskControls = await _repo.GetAllAsync();
-            return riskControls.Select(rc => ToDto(rc)).ToList();
+            var riskControlsDtos = riskControls.Select(rc => ToDto(rc)).ToList();
+            return ResultT<List<RiskControlDto>>.Success(riskControlsDtos);
         }
 
-        public async Task<RiskControlDto> GetByIdAsync(Guid id)
+        public async Task<ResultT<RiskControlDto>> GetByIdAsync(Guid id)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
-            return ToDto(riskControl);
+            return ResultT<RiskControlDto>.Success(ToDto(riskControl));
         }
 
-        public async Task<RiskControlDto> AddAsync(CreateRiskControlDto dto)
+        public async Task<ResultT<RiskControlDto>> AddAsync(Guid userId, CreateRiskControlDto dto)
         {
-            var riskControl = await ToEntity(dto);
+            var riskControl = await ToEntity(userId, dto);
             await _repo.AddAsync(riskControl);
-            return ToDto(riskControl);
+            return ResultT<RiskControlDto>.Success(ToDto(riskControl));
         }
 
-        public async Task<RiskControlDto> UpdateAsync(Guid id, UpdateRiskControlDto dto)
+        public async Task<ResultT<RiskControlDto>> UpdateAsync(Guid id, Guid userId, UpdateRiskControlDto dto)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
 
-            UpdateEntity(riskControl, dto);
+            UpdateEntity(riskControl, userId, dto);
             await _repo.UpdateAsync(riskControl);
-            return ToDto(riskControl);
+            return ResultT<RiskControlDto>.Success(ToDto(riskControl));
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
-            await _repo.DeleteAsync(riskControl);
+            await _softDeleteService.DeleteAsync<RiskControl>(id, userId);
+            return Result.Success();
         }
 
-        public async Task<RiskControlDto> PatchAsync(Guid id, PatchRiskControlDto dto)
+        public async Task<Result> RestoreAsync(Guid id, Guid userId)
+        {
+            var riskControl = await CheckRiskControlExistAndGet(id);
+            await _softDeleteService.RestoreAsync<RiskControl>(id, userId);
+            return Result.Success();
+        }
+
+        public async Task<ResultT<RiskControlDto>> PatchAsync(Guid id, Guid userId, PatchRiskControlDto dto)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
 
-            await PatchEntity(riskControl, dto);
+            await PatchEntity(riskControl, userId, dto);
             await _repo.UpdateAsync(riskControl);
-            return ToDto(riskControl);
+            return ResultT<RiskControlDto>.Success(ToDto(riskControl));
         }
     }
 }
