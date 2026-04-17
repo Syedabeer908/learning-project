@@ -29,7 +29,7 @@ namespace WebApplication1.Middlewares
             }
             catch (Exception ex)
             {
-                await throwException(context, 500, $"Internal server error: {ex.Message}");
+                await throwException(context, 500, $"Internal server error: {ex.ToString()}");
             }
         }
 

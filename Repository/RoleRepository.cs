@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Data;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
 
@@ -16,17 +15,17 @@ namespace WebApplication1.Repository
 
         public async Task<Role?> GetByIdAsync(Guid id)
         {
-            return await _context.Role.FirstOrDefaultAsync(r => r.RoleId == id);
+            return await _context.Role.AsNoTracking().FirstOrDefaultAsync(r => r.RoleId == id);
         }
 
         public async Task<Role?> GetByNameAsync(string name)
         {
-            return await _context.Role.FirstOrDefaultAsync(r => r.Name == name);
+            return await _context.Role.AsNoTracking().FirstOrDefaultAsync(r => r.Name == name);
         }
 
         public async Task<List<Role>> GetAllAsync()
         {
-            return await _context.Role.ToListAsync();
+            return await _context.Role.AsNoTracking().ToListAsync();
         }
 
         public async Task AddAsync(Role role)
@@ -49,9 +48,14 @@ namespace WebApplication1.Repository
 
         public async Task<bool> RoleNameExistsAsync(string roleName, Guid? excludeId = null)
         {
-            return await _context.Role
-                .AnyAsync(u => u.Name.ToLower() == roleName.ToLower()
-                               && (!excludeId.HasValue || u.RoleId != excludeId));
+            var query = _context.Role.AsNoTracking()
+                .Where(u => u.Name == roleName);
+
+            if (excludeId.HasValue)
+                query = query.Where(u => u.RoleId != excludeId);
+
+            return await query.AnyAsync();
+                
         }
     }
 }

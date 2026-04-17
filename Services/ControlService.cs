@@ -1,21 +1,20 @@
 ﻿using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
-using WebApplication1.Entities;
+using WebApplication1.Data;
 using WebApplication1.DTOs.Control;
+using WebApplication1.Entities;
 using WebApplication1.Interfaces;
-using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
     public class ControlService
     {
         private readonly IRepository<Control> _repo;
-        private readonly SoftDeleteService _softDeleteService;
-
-        public ControlService(IRepository<Control> repo, SoftDeleteService softDeleteService)
+        private readonly ISoftRepository _softRepo;
+        public ControlService(IRepository<Control> repo, ISoftRepository softRepo)
         {
             _repo = repo;
-            _softDeleteService = softDeleteService;
+            _softRepo = softRepo;
         }
 
         private ControlDto ToDto(Control control)
@@ -68,6 +67,13 @@ namespace WebApplication1.Services
             return control;
         }
 
+        private async Task RunSoftService(Guid id, bool action, Guid actionBy)
+        {
+            var soft = new Soft();
+            var values = soft.SoftValuesSetter(action, DateTime.UtcNow, actionBy);
+            await _softRepo.SoftControlAsync(id, values);
+        }
+
         public async Task<ResultT<List<ControlDto>>> GetAllAsync()
         {
             var controls = await _repo.GetAllAsync();
@@ -85,7 +91,10 @@ namespace WebApplication1.Services
         {
             var control = ToEntity(userId, dto);
             await _repo.AddAsync(control);
-            return ResultT<ControlDto>.Success(ToDto(control));
+
+            var data = await CheckControlExistAndGet(control.ControlId);
+
+            return ResultT<ControlDto>.Success(ToDto(data));
         }
 
         public async Task<ResultT<ControlDto>> UpdateAsync(Guid id, Guid userId, UpdateControlDto dto)
@@ -99,14 +108,14 @@ namespace WebApplication1.Services
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var control = await CheckControlExistAndGet(id);
-            await _softDeleteService.DeleteAsync<Control>(id, userId);
+            await RunSoftService(id, true, userId);
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(Guid id, Guid userId)
         {
             var control = await CheckControlExistAndGet(id);
-            await _softDeleteService.RestoreAsync<Control>(id, userId);
+            await RunSoftService(id, false, userId);
             return Result.Success();
         }
 

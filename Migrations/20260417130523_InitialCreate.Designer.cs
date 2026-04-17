@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260415152447_InitialCreate")]
+    [Migration("20260417130523_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -69,6 +69,10 @@ namespace WebApplication1.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ControlId");
+
+                    b.HasIndex("IsDeleted");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Control");
@@ -118,6 +122,10 @@ namespace WebApplication1.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("RiskId");
 
                     b.HasIndex("UserId");
 
@@ -172,6 +180,10 @@ namespace WebApplication1.Migrations
 
                     b.HasIndex("ControlId");
 
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("RiskControlId");
+
                     b.HasIndex("RiskId");
 
                     b.HasIndex("UserId");
@@ -217,8 +229,12 @@ namespace WebApplication1.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsDeleted");
+
                     b.HasIndex("Name")
                         .IsUnique();
+
+                    b.HasIndex("RoleId");
 
                     b.ToTable("Role");
                 });
@@ -283,7 +299,13 @@ namespace WebApplication1.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsDeleted");
+
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("User");
                 });

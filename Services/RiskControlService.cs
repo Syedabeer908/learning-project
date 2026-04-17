@@ -1,10 +1,10 @@
 ﻿using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
+using WebApplication1.Data;
 using WebApplication1.Entities;
 using WebApplication1.Entities.Enums;
 using WebApplication1.DTOs.RiskControl;
 using WebApplication1.Interfaces;
-using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
@@ -13,15 +13,15 @@ namespace WebApplication1.Services
         private readonly IRepository<RiskControl> _repo;
         private readonly IRepository<Risk> _riskRepo;
         private readonly IRepository<Control> _controlRepo;
-        private readonly SoftDeleteService _softDeleteService;
+        private readonly ISoftRepository _softRepo;
 
         public RiskControlService(IRepository<RiskControl> repo, IRepository<Risk> riskRepo,
-                                  IRepository<Control> controlRepo, SoftDeleteService softDeleteService)
+                                  IRepository<Control> controlRepo, ISoftRepository softRepo)
         {
             _repo = repo;
             _riskRepo = riskRepo;
             _controlRepo = controlRepo;
-            _softDeleteService = softDeleteService;
+            _softRepo =  softRepo;
         }
 
         private RiskControlDto ToDto(RiskControl riskControl)
@@ -92,6 +92,13 @@ namespace WebApplication1.Services
             return riskControl;
         }
 
+        private async Task RunSoftService(Guid id, bool action, Guid actionBy)
+        {
+            var soft = new Soft();
+            var values = soft.SoftValuesSetter(action, DateTime.UtcNow, actionBy);
+            await _softRepo.SoftRiskControlAsync(id, values);
+        }
+
         public async Task<ResultT<List<RiskControlDto>>> GetAllAsync()
         {
             var riskControls = await _repo.GetAllAsync();
@@ -109,7 +116,10 @@ namespace WebApplication1.Services
         {
             var riskControl = await ToEntity(userId, dto);
             await _repo.AddAsync(riskControl);
-            return ResultT<RiskControlDto>.Success(ToDto(riskControl));
+
+            var data = await CheckRiskControlExistAndGet(riskControl.RiskControlId);
+
+            return ResultT<RiskControlDto>.Success(ToDto(data));
         }
 
         public async Task<ResultT<RiskControlDto>> UpdateAsync(Guid id, Guid userId, UpdateRiskControlDto dto)
@@ -124,14 +134,14 @@ namespace WebApplication1.Services
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
-            await _softDeleteService.DeleteAsync<RiskControl>(id, userId);
+            await RunSoftService(id, true, userId);
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(Guid id, Guid userId)
         {
             var riskControl = await CheckRiskControlExistAndGet(id);
-            await _softDeleteService.RestoreAsync<RiskControl>(id, userId);
+            await RunSoftService(id, false, userId);
             return Result.Success();
         }
 

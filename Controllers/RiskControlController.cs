@@ -35,7 +35,7 @@ namespace WebApplication1.Controllers
         [HttpPost]
         public async Task<IActionResult> AddAsync([FromBody] CreateRiskControlDto dto)
         {
-            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var userId = HttpContext.GetUserId();
             var result = await _service.AddAsync(userId, dto);
             if (result.Result == null)
                 return BadRequest(result);
@@ -46,7 +46,7 @@ namespace WebApplication1.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRiskControlDto dto)
         {
-            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var userId = HttpContext.GetUserId();
             var result = await _service.UpdateAsync(id, userId, dto);
             return Ok(result);
         }
@@ -54,7 +54,7 @@ namespace WebApplication1.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
-            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var userId = HttpContext.GetUserId();
             var result = await _service.DeleteAsync(id, userId);
             return Ok(result);
         }
@@ -62,7 +62,7 @@ namespace WebApplication1.Controllers
         [HttpPatch("{id}/restore")]
         public async Task<IActionResult> RestoreAsync(Guid id)
         {
-            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var userId = HttpContext.GetUserId();
             var result = await _service.RestoreAsync(id, userId);
             return Ok(result);
         }
@@ -70,7 +70,7 @@ namespace WebApplication1.Controllers
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRiskControlDto dto)
         {
-            var userId = HttpContextExtensions.GetUserId(HttpContext);
+            var userId = HttpContext.GetUserId();
             var result = await _service.PatchAsync(id, userId, dto);
             return Ok(result);
         }

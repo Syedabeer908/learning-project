@@ -1,6 +1,6 @@
 ﻿using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
-using WebApplication1.Data.SoftDelete.Services;
+using WebApplication1.Data;
 using WebApplication1.DTOs.Risk;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
@@ -10,12 +10,12 @@ namespace WebApplication1.Services
     public class RiskService
     {
         private readonly IRepository<Risk> _repo;
-        private readonly SoftDeleteService _softDeleteService;
+        private readonly ISoftRepository _softRepo;
 
-        public RiskService(IRepository<Risk> repo, SoftDeleteService softDeleteService)
+        public RiskService(IRepository<Risk> repo, ISoftRepository softRepo)
         {
             _repo = repo;
-            _softDeleteService = softDeleteService;
+            _softRepo = softRepo;
         }
 
         private RiskDto ToDto(Risk risk)
@@ -68,6 +68,13 @@ namespace WebApplication1.Services
             return risk;
         }
 
+        private async Task RunSoftService(Guid id, bool action, Guid actionBy)
+        {
+            var soft = new Soft();
+            var values = soft.SoftValuesSetter(action, DateTime.UtcNow, actionBy);
+            await _softRepo.SoftRiskAsync(id, values);
+        }
+
         public async Task<ResultT<List<RiskDto>>> GetAllAsync()
         {
             var risks = await _repo.GetAllAsync();
@@ -85,7 +92,10 @@ namespace WebApplication1.Services
         {
             var risk = ToEntity(userId, dto);
             await _repo.AddAsync(risk);
-            return ResultT<RiskDto>.Success(ToDto(risk));
+
+            var data = await CheckRiskExistAndGet(risk.RiskId);
+
+            return ResultT<RiskDto>.Success(ToDto(data));
         }
 
         public async Task<ResultT<RiskDto>> UpdateAsync(Guid id, Guid userId, UpdateRiskDto dto)
@@ -99,14 +109,14 @@ namespace WebApplication1.Services
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var risk = await CheckRiskExistAndGet(id);
-            await _softDeleteService.DeleteAsync<Risk>(id, userId);
+            await RunSoftService(id, true, userId);
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(Guid id, Guid userId)
         {
             var risk = await CheckRiskExistAndGet(id);
-            await _softDeleteService.RestoreAsync<Risk>(id, userId);
+            await RunSoftService(id, false, userId);
             return Result.Success();
         }
 

@@ -16,8 +16,11 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasIndex(r => r.Name)
+            // Unique index for Name
+            entity.HasIndex(n => n.Name)
                 .IsUnique();
+            entity.HasIndex(r => r.RoleId);
+            entity.HasIndex(id => id.IsDeleted);
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -28,8 +31,14 @@ public class AppDbContext : DbContext
                   .HasPrincipalKey(r => r.RoleId)
                   .OnDelete(DeleteBehavior.Restrict);
 
+            // Unique indexes for Email
             entity.HasIndex(u => u.Email)
                   .IsUnique();
+
+            entity.HasIndex(u => u.UserId);
+            entity.HasIndex(r => r.RoleId);
+            entity.HasIndex(ia => ia.IsActive);
+            entity.HasIndex(id => id.IsDeleted);
         });
 
         modelBuilder.Entity<Risk>(entity =>
@@ -39,6 +48,10 @@ public class AppDbContext : DbContext
                   .HasForeignKey(u => u.UserId)
                   .HasPrincipalKey(u => u.UserId)
                   .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(r => r.RiskId);
+            entity.HasIndex(u => u.UserId);
+            entity.HasIndex(id => id.IsDeleted);
         });
 
         modelBuilder.Entity<Control>(entity =>
@@ -48,6 +61,10 @@ public class AppDbContext : DbContext
                   .HasForeignKey(u => u.UserId)
                   .HasPrincipalKey(u => u.UserId)
                   .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(c => c.ControlId);
+            entity.HasIndex(u => u.UserId);
+            entity.HasIndex(id => id.IsDeleted);
         });
 
         modelBuilder.Entity<RiskControl>(entity =>
@@ -69,6 +86,12 @@ public class AppDbContext : DbContext
                   .HasForeignKey(c => c.ControlId)
                   .HasPrincipalKey(c => c.ControlId)
                   .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(rc => rc.RiskControlId);
+            entity.HasIndex(u => u.UserId);
+            entity.HasIndex(r => r.RiskId);
+            entity.HasIndex(c => c.ControlId);
+            entity.HasIndex(id => id.IsDeleted);
         });
     }
 }

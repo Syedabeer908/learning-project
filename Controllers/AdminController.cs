@@ -22,10 +22,9 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> GetAllAsync( [FromQuery] string? search,
                 [FromQuery] bool? isActive,
                 [FromQuery] Guid? lastId,
-                [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 10 )
         {
-            var result = await _service.GetAllAsync(search, isActive, lastId, page, pageSize);
+            var result = await _service.GetAllAsync(pageSize, search, isActive, lastId);
             return Ok(result);
         }
 

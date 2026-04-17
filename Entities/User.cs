@@ -9,6 +9,10 @@ namespace WebApplication1.Entities
         public Guid UserId { get; set; }
 
         [Required]
+        public Guid RoleId { get; set; }
+        public Role Role { get; set; } = null!;
+
+        [Required]
         [Column(TypeName = "nvarchar(200)")]
         public string Username { get; set; }
 
@@ -21,12 +25,7 @@ namespace WebApplication1.Entities
         [MaxLength(500)]
         public string PasswordHash { get; set; }
         public bool IsActive { get; set; } = true;
-
         public int TokenVersion { get; set; } = 0;
-
-        [Required]
-        public Guid RoleId { get; set; }
-        public Role Role { get; set; } = null!;
 
         public ICollection<Risk> Risks { get; set; } = new List<Risk>();
         public ICollection<Control> Controls { get; set; } = new List<Control>();

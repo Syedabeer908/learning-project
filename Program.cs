@@ -13,9 +13,6 @@ using WebApplication1.Services;
 using WebApplication1.Interfaces;
 using WebApplication1.Repository;
 using WebApplication1.Common.Constants;
-using WebApplication1.Data.SoftDelete.Cascade;
-using WebApplication1.Data.SoftDelete.Executor;
-using WebApplication1.Data.SoftDelete.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +63,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRepository<Risk>, RiskRepository>();
 builder.Services.AddScoped<IRepository<Control>, ControlRepository>();
 builder.Services.AddScoped<IRepository<RiskControl>, RiskControlRepository>();
+builder.Services.AddScoped<ISoftRepository, SoftRepository>();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserDomainService>();
@@ -78,9 +76,6 @@ builder.Services.AddScoped<RiskControlService>();
 builder.Services.AddScoped<RedisService>();
 builder.Services.AddScoped<RoleConstants>();
 
-builder.Services.AddScoped<SoftDeleteExecutor>();
-builder.Services.AddScoped<CascadePlanBuilder>();
-builder.Services.AddScoped<SoftDeleteService>();
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration

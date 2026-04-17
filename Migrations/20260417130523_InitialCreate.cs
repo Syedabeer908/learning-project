@@ -40,12 +40,12 @@ namespace WebApplication1.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Username = table.Column<string>(type: "nvarchar(200)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     TokenVersion = table.Column<int>(type: "int", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastUpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -164,9 +164,29 @@ namespace WebApplication1.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Control_ControlId",
+                table: "Control",
+                column: "ControlId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Control_IsDeleted",
+                table: "Control",
+                column: "IsDeleted");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Control_UserId",
                 table: "Control",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Risk_IsDeleted",
+                table: "Risk",
+                column: "IsDeleted");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Risk_RiskId",
+                table: "Risk",
+                column: "RiskId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Risk_UserId",
@@ -179,6 +199,16 @@ namespace WebApplication1.Migrations
                 column: "ControlId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RiskControl_IsDeleted",
+                table: "RiskControl",
+                column: "IsDeleted");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RiskControl_RiskControlId",
+                table: "RiskControl",
+                column: "RiskControlId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RiskControl_RiskId",
                 table: "RiskControl",
                 column: "RiskId");
@@ -189,10 +219,20 @@ namespace WebApplication1.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Role_IsDeleted",
+                table: "Role",
+                column: "IsDeleted");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Role_Name",
                 table: "Role",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Role_RoleId",
+                table: "Role",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_User_Email",
@@ -201,9 +241,24 @@ namespace WebApplication1.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_User_IsActive",
+                table: "User",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_User_IsDeleted",
+                table: "User",
+                column: "IsDeleted");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_User_RoleId",
                 table: "User",
                 column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_User_UserId",
+                table: "User",
+                column: "UserId");
         }
 
         /// <inheritdoc />

@@ -14,13 +14,15 @@ namespace WebApplication1.Repository
         }
 
         public async Task<List<RiskControl>> GetAllAsync() => 
-          await _context.RiskControl
+          await _context.RiskControl.AsNoTracking()
+                .Include(u => u.User)
                 .Include(rc => rc.Risk)
                 .Include(rc => rc.Control)
                 .ToListAsync();
 
         public async Task<RiskControl?> GetByIdAsync(Guid riskControlId) =>
             await _context.RiskControl
+                .Include(u => u.User).AsNoTracking()
                 .Include(rc => rc.Risk)
                 .Include(rc => rc.Control)
                 .FirstOrDefaultAsync(rc => rc.RiskControlId == riskControlId);
@@ -41,11 +43,6 @@ namespace WebApplication1.Repository
         {
             _context.RiskControl.Remove(riskControl);
             await _context.SaveChangesAsync();
-        }
-
-        public async Task<bool> CheckIfExist(int id)
-        {
-            return await _context.RiskControl.AnyAsync(r => r.Id == id);
         }
     }
 }

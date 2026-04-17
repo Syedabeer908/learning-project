@@ -13,10 +13,15 @@ namespace WebApplication1.Repository
             _context = context;
         }
 
-        public async Task<List<Control>> GetAllAsync() => await _context.Control.ToListAsync();
+        public async Task<List<Control>> GetAllAsync() => 
+            await _context.Control.AsNoTracking()
+                .Include(u => u.User)
+                .ToListAsync();
 
         public async Task<Control?> GetByIdAsync(Guid controlId) =>
-            await _context.Control.FirstOrDefaultAsync(r => r.ControlId == controlId);
+            await _context.Control.AsNoTracking()
+                .Include(u => u.User)
+                .FirstOrDefaultAsync(r => r.ControlId == controlId);
 
         public async Task AddAsync(Control control)
         {
@@ -34,11 +39,6 @@ namespace WebApplication1.Repository
         {
             _context.Control.Remove(control);
             await _context.SaveChangesAsync();
-        }
-
-        public async Task<bool> CheckIfExist(int id)
-        {
-            return await _context.Control.AnyAsync(r => r.Id == id);
         }
     }
 }

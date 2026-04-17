@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
+using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
-using WebApplication1.Common.Constants;
-using WebApplication1.Entities;
+using WebApplication1.Data;
 using WebApplication1.DTOs.Role;
+using WebApplication1.Entities;
 using WebApplication1.Interfaces;
-using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
@@ -13,16 +13,15 @@ namespace WebApplication1.Services
     {
         private readonly IRoleRepository _repo;
         private readonly IUserRepository _userRepo;
+        private readonly ISoftRepository _softRepo;
         private readonly RoleConstants _roleConstants;
-        private readonly SoftDeleteService _softDeleteService;  
-
         public RoleService(IRoleRepository repo, IUserRepository userRepo,
-            IOptions<RoleConstants> roleOptions, SoftDeleteService softDeleteService)
+            ISoftRepository softRepo, IOptions<RoleConstants> roleOptions)
         {
             _repo = repo;
             _userRepo = userRepo;
+            _softRepo = softRepo;
             _roleConstants = roleOptions.Value;
-            _softDeleteService = softDeleteService;
         }
 
         private RoleDto ToDto(Role role)
@@ -79,7 +78,7 @@ namespace WebApplication1.Services
         private async Task CheckRoleInUse(Guid roleId)
         {
             var userWithRole = await _userRepo.GetByRoleIdAsync(roleId);
-            if(userWithRole != null)
+            if(userWithRole.Any())
             {
                 throw new BadRequestException($"Cannot delete role with id {roleId} because it is assigned to one or more users.");
             }
@@ -93,6 +92,13 @@ namespace WebApplication1.Services
                 throw new BadRequestException($"Cannot delete startup role '{role.Name}'.");
             }
             await CheckRoleInUse(role.RoleId);
+        }
+
+        private async Task RunSoftService(Guid id, bool action, Guid actionBy)
+        {
+            var soft = new Soft();
+            var values = soft.SoftValuesSetter(action, DateTime.UtcNow, actionBy);
+            await _softRepo.SoftRoleAsync(id, values);
         }
 
         public async Task<ResultT<List<RoleDto>>> GetAllAsync()
@@ -134,18 +140,18 @@ namespace WebApplication1.Services
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
         {
             var role = await CheckRoleExistAndGet(id);
-
             await CheckRoleNotStartupRole(role);
 
-            await _softDeleteService.DeleteAsync<Role>(id, userId);
-
+            await RunSoftService(id, true, userId);
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(Guid id, Guid userId)
         {
             var role = await CheckRoleExistAndGet(id);
-            await _softDeleteService.RestoreAsync<Role>(id, userId);
+            await CheckRoleNotStartupRole(role);
+
+            await RunSoftService(id, false, userId);
             return Result.Success();
         }
 

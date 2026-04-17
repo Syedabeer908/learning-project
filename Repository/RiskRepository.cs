@@ -13,10 +13,15 @@ namespace WebApplication1.Repository
             _context = context;
         }
 
-        public async Task<List<Risk>> GetAllAsync() => await _context.Risk.ToListAsync();
+        public async Task<List<Risk>> GetAllAsync() => 
+            await _context.Risk.AsNoTracking()
+                .Include(u => u.User)
+                .ToListAsync();
 
         public async Task<Risk?> GetByIdAsync(Guid riskId) =>
-            await _context.Risk.FirstOrDefaultAsync(r => r.RiskId == riskId);
+            await _context.Risk.AsNoTracking()
+                .Include(u => u.User)
+                .FirstOrDefaultAsync(r => r.RiskId == riskId);
 
         public async Task AddAsync(Risk risk)
         {
@@ -34,11 +39,6 @@ namespace WebApplication1.Repository
         {
             _context.Risk.Remove(risk);
             await _context.SaveChangesAsync();
-        }
-
-        public async Task<bool> CheckIfExist(int id)
-        {
-            return await _context.Risk.AnyAsync(r => r.Id == id);
         }
     }
 }

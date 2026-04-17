@@ -4,28 +4,27 @@ using System.Text.Json;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
 using WebApplication1.Common.Constants;
+using WebApplication1.Data;
 using WebApplication1.Entities;
 using WebApplication1.DTOs.Admin;
 using WebApplication1.Interfaces;
-using WebApplication1.Data.SoftDelete.Services;
 
 namespace WebApplication1.Services
 {
     public class AdminService
     {
         private readonly IUserRepository _repo;
-        private readonly SoftDeleteService _softDeleteService;
+        private readonly ISoftRepository _softRepo;
         private readonly UserDomainService _userDomainService;
         private readonly RedisService _redis;
         private readonly RoleConstants _roleConstants;
         private readonly PasswordHasher<User> _hasher;
 
-        public AdminService(IUserRepository repo, SoftDeleteService softDeleteService,
-            UserDomainService userDomainService,
-            RedisService redis, IOptions<RoleConstants> roleOptions)
+        public AdminService(IUserRepository repo, ISoftRepository softRepo,
+            UserDomainService userDomainService, RedisService redis, IOptions<RoleConstants> roleOptions)
         {
             _repo = repo;
-            _softDeleteService = softDeleteService;
+            _softRepo = softRepo;
             _userDomainService = userDomainService;
             _redis = redis;
             _roleConstants = roleOptions.Value;
@@ -106,17 +105,24 @@ namespace WebApplication1.Services
             return Task.FromResult(json);
         }
 
-        private async Task  CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
+        private async Task CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
         {
             var prefix = _roleConstants.User;
             var data = await CreateValueForCacheAfterUserUpdate(user);
             await _redis.SetAsync(prefix, userId, data, TimeSpan.FromHours(1));
             
         }
-
-        public async Task<ResultT<List<AdminUserDto>>> GetAllAsync(string? search, bool? isActive, Guid? lastId, int page, int pageSize)
+        private async Task RunSoftService(Guid id, bool action, Guid actionBy)
         {
-            var users = await _repo.GetAllAsync(search, isActive, lastId, page, pageSize);
+            var soft = new Soft();
+            var values = soft.SoftValuesSetter(action, DateTime.UtcNow, actionBy);
+            await _softRepo.SoftUserAsync(id, values);
+        }
+
+        public async Task<ResultT<List<AdminUserDto>>> GetAllAsync(int pageSize, string? search,
+            bool? isActive, Guid? lastId)
+        {
+            var users = await _repo.GetAllAsync(pageSize, search, isActive, lastId);
             var usersDtos = users.Select(u => ToDto(u)).ToList();
             return ResultT<List<AdminUserDto>>.Success(usersDtos);    
         }
@@ -141,11 +147,13 @@ namespace WebApplication1.Services
             if (role == null)
                 throw new NotFoundException($"RoleId '{dto.RoleId}' not found.");
 
-            var user = ToEntity(userId,dto);
+            var user = ToEntity(userId, dto);
 
             await _repo.AddAsync(user);
 
-            return ResultT<AdminUserDto>.Success(ToDto(user));
+            var data = await _userDomainService.CheckUserExistAndGet(user.UserId);
+
+            return ResultT<AdminUserDto>.Success(ToDto(data));
         }
 
         public async Task<ResultT<AdminUserDto>> UpdateAsync(Guid id, Guid userId, UpdateAdminUserDto dto)
@@ -180,8 +188,9 @@ namespace WebApplication1.Services
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await CheckIsAdmin(user.RoleId);
-            await _softDeleteService.DeleteAsync<User>(id, userId);
-            user.IsDeleted = true; 
+            user.IsDeleted = true;
+
+            await RunSoftService(id, user.IsDeleted, userId);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();
         }
@@ -191,8 +200,9 @@ namespace WebApplication1.Services
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await CheckIsAdmin(user.RoleId);
-            await _softDeleteService.RestoreAsync<User>(id, userId);
             user.IsDeleted = false;
+
+            await RunSoftService(id, user.IsDeleted, userId);
             await CreateOrUpdateCacheAfterUserUpdate(id, user);
             return Result.Success();
         }

@@ -14,48 +14,45 @@ namespace WebApplication1.Repository
 
         public async Task<User?> GetByIdAsync(Guid id)
         {
-            return await _context.User.Include(u => u.Role)
+            return await _context.User.AsNoTracking().Include(u => u.Role)
                                        .FirstOrDefaultAsync(u => u.UserId == id);
         }
 
         public async Task<User?> GetByEmailAsync(string email)
         {
-            return await _context.User.Include(u => u.Role)
-                                       .FirstOrDefaultAsync(u => u.Email == email);
+            return await _context.User.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<User?> GetByRoleIdAsync(Guid roleId)
+        public async Task<List<User>> GetByRoleIdAsync(Guid roleId)
         {
-            return await _context.User.Include(u => u.Role)
-                                       .FirstOrDefaultAsync(u => u.RoleId == roleId);
+            return await _context.User.AsNoTracking().Include(u => u.Role).Where(u => u.RoleId == roleId).ToListAsync();
         }
 
-        public async Task<List<User>> GetAllAsync(string? search = "",
-            bool? isActive = null, Guid? lastId = null, int page = 1, int pageSize = 10)
+        public async Task<List<User>> GetAllAsync(int pageSize = 10, string? search = "",
+            bool? isActive = null, Guid? lastId = null)
         {
-            var query = _context.User.AsQueryable();
-
-            //if(lastId != null)
-            //{
-            //    query = query.Where(u => u.UserId > lastId);
-            //}
+            var query = _context.User.AsNoTracking();
 
             if (isActive != null) 
             {
                 query = query.Where(u => u.IsActive == isActive);
             }
 
-            if(!string.IsNullOrEmpty(search))
+            if (!string.IsNullOrEmpty(search))
             {
-                search = search.ToLower();
-                query = query.Where(u => u.Username.ToLower().Contains(search) ||
-                    u.Email.ToLower().Contains(search) ||
-                    u.Role.Name.ToLower().Contains(search));
+                query = query.Where(u =>
+                    EF.Functions.Like(u.Username, $"{search}%") ||
+                    EF.Functions.Like(u.Email, $"{search}%"));
+            }
+
+            if (lastId != null)
+            {
+                query = query.Where(u => u.UserId > lastId);
             }
 
             return await query
                 .Include(u => u.Role)
-                .OrderBy(b => b.Id)
+                .OrderBy(b => b.UserId)
                 .Take(pageSize)
                 .ToListAsync();
         }
@@ -80,16 +77,13 @@ namespace WebApplication1.Repository
 
         public async Task<bool> EmailExistsAsync(string email, Guid? excludeId = null)
         {
-            return await _context.User
-                .AnyAsync(u => u.Email.ToLower() == email.ToLower()
-                               && (!excludeId.HasValue || u.UserId != excludeId));
-        }
+            var query = _context.User.AsNoTracking()
+                .Where(u => u.Email == email);
 
-        public async Task<int> CountAsync(string roleName)
-        {
-            return await _context.User
-                .Where(u => u.Role.Name.ToLower() == roleName.ToLower())
-                .CountAsync();
+            if (excludeId.HasValue)
+                query = query.Where(u => u.UserId != excludeId);
+
+            return await query.AnyAsync();
         }
     }
 }

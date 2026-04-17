@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace WebApplication1.Interfaces
+﻿namespace WebApplication1.Interfaces
 {
     public interface IRepository<T> where T : class
     {
@@ -11,6 +7,5 @@ namespace WebApplication1.Interfaces
         Task AddAsync(T entity);
         Task UpdateAsync(T entity);
         Task DeleteAsync(T entity);
-        Task<bool> CheckIfExist(int id);
     }
 }
