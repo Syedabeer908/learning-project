@@ -16,6 +16,8 @@ using WebApplication1.Common.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add User Secret
+builder.Configuration.AddUserSecrets<Program>();
 
 // Add services to the container.
 builder.Services.AddControllers();
