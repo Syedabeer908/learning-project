@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
 
-namespace WebApplication1.Controllers
+namespace WebApplication1.Controllers.V1
 {
     [AllowAnonymous]
     [ApiController]
@@ -28,6 +28,13 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> Login(AuthLoginDto dto)
         {
             var authResponse = await _authService.LoginAsync(dto);
+            return Ok(authResponse);
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh(RefreshTokenDto dto)
+        {
+            var authResponse = await _authService.Refresh(dto);
             return Ok(authResponse);
         }
     }

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260417130523_InitialCreate")]
+    [Migration("20260420164044_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -76,6 +76,41 @@ namespace WebApplication1.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Control");
+                });
+
+            modelBuilder.Entity("WebApplication1.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RefreshTokenId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RefreshTokenId");
+
+                    b.HasIndex("Token");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshToken");
                 });
 
             modelBuilder.Entity("WebApplication1.Entities.Risk", b =>
@@ -322,6 +357,18 @@ namespace WebApplication1.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("WebApplication1.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WebApplication1.Entities.Risk", b =>
                 {
                     b.HasOne("WebApplication1.Entities.User", "User")
@@ -394,6 +441,8 @@ namespace WebApplication1.Migrations
             modelBuilder.Entity("WebApplication1.Entities.User", b =>
                 {
                     b.Navigation("Controls");
+
+                    b.Navigation("RefreshTokens");
 
                     b.Navigation("RiskControls");
 

@@ -1,15 +1,18 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
-using WebApplication1.Common.Constants;
-using WebApplication1.Entities;
 using WebApplication1.DTOs;
+using WebApplication1.Entities;
 using WebApplication1.Interfaces;
+using WebApplication1.Mappers;
 
 namespace WebApplication1.Services
 {
@@ -17,42 +20,23 @@ namespace WebApplication1.Services
     {
         private readonly IUserRepository _userRepo;
         private readonly IRoleRepository _roleRepo;
+        private readonly IRefreshTokenRepository _refreshTokenRepo;
         private readonly AuthConstants _authConstants;
         private readonly RoleConstants _roleConstants;
+        private readonly AuthMapper _mapper;
         private readonly PasswordHasher<User> _hasher;
 
-        public AuthService(IUserRepository userRepo, IRoleRepository roleRepo, IOptions<AuthConstants> authOptions, IOptions<RoleConstants> rolesettings)
+        public AuthService(IUserRepository userRepo, IRoleRepository roleRepo,
+            IRefreshTokenRepository refreshTokenRepo,
+            IOptions<AuthConstants> authOptions, IOptions<RoleConstants> rolesettings)
         {
             _userRepo = userRepo;
             _roleRepo = roleRepo;
+            _refreshTokenRepo = refreshTokenRepo;
             _authConstants = authOptions.Value;
             _roleConstants = rolesettings.Value;
+            _mapper = new AuthMapper();
             _hasher = new PasswordHasher<User>();
-        }
-
-        private User ToEntity(AuthRegisterDto dto, Role ?role)
-        {
-            if (role == null)
-                throw new NotFoundException($"Role '{_roleConstants.User}' not found.");
-
-            var user = new User
-            {
-                UserId = Guid.NewGuid(),
-                Username = dto.Username,
-                Email = dto.Email,
-                RoleId = role.RoleId,
-            };
-
-            user.PasswordHash = _hasher.HashPassword(user, dto.Password);
-            return user;
-        }
-
-        private AuthResponseDto ToDto(string token)
-        {
-            return new AuthResponseDto
-            {
-                Token = token
-            };
         }
 
         private async Task CheckEmailUnique(string email, Guid? excludeId = null)
@@ -80,11 +64,20 @@ namespace WebApplication1.Services
 
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(_authConstants.ExpiryHours),
+                expires: DateTime.UtcNow.AddMinutes(_authConstants.ExpiryMinutes),
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+
+            return Convert.ToBase64String(randomBytes);
         }
 
         private async Task ValidatePassword(User user, string password)
@@ -106,13 +99,17 @@ namespace WebApplication1.Services
             await CheckEmailUnique(dto.Email);
             var role = await _roleRepo.GetByNameAsync(_roleConstants.User);
 
-            var user = ToEntity(dto, role);
+            var user = _mapper.ToEntity(dto, role);
 
             await _userRepo.AddAsync(user);
 
             var token = GenerateToken(user);
+            var refreshToken = GenerateRefreshToken();
+            var newTokenEntity = _mapper.ToRefreshTokenEntity(refreshToken, user.UserId);
 
-            return ResultT<AuthResponseDto>.Success(ToDto(token));
+            await _refreshTokenRepo.AddRefreshTokenAsync(newTokenEntity);
+
+            return ResultT<AuthResponseDto>.Success(_mapper.ToDto(token, refreshToken));
         }
 
         public async Task<ResultT<AuthResponseDto>> LoginAsync(AuthLoginDto authLoginDto)
@@ -128,8 +125,37 @@ namespace WebApplication1.Services
             await ValidatePassword(user, password);
 
             var token = GenerateToken(user);
+            var refreshToken = GenerateRefreshToken();
+            var newTokenEntity = _mapper.ToRefreshTokenEntity(refreshToken, user.UserId);
 
-            return ResultT<AuthResponseDto>.Success(ToDto(token));
+            await _refreshTokenRepo.AddRefreshTokenAsync(newTokenEntity);
+
+            return ResultT<AuthResponseDto>.Success(_mapper.ToDto(token, refreshToken));
+        }
+
+        public async Task<ResultT<AuthResponseDto>> Refresh(RefreshTokenDto request)
+        {
+            var storedToken = await _refreshTokenRepo.GetByTokenAsync(request.Token);
+
+            if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiryDate < DateTime.UtcNow)
+                throw new BadRequestException("Invalid refresh token");
+
+            var user = await _userRepo.GetByIdAsync(storedToken.UserId);
+
+            if (user == null)
+                throw new BadRequestException("User not found");
+
+            storedToken.IsRevoked = true;
+
+            var refreshToken = GenerateRefreshToken();
+
+            var newTokenEntity = _mapper.ToRefreshTokenEntity(refreshToken, user.UserId);
+
+            await _refreshTokenRepo.AddRefreshTokenAsync(newTokenEntity);
+
+            var token = GenerateToken(user);
+
+            return ResultT<AuthResponseDto>.Success(_mapper.ToDto(token, refreshToken));
         }
     }
 }

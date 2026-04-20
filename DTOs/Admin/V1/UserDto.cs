@@ -1,9 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using WebApplication1.DTOs;
-
-namespace WebApplication1.DTOs.Admin
+﻿namespace WebApplication1.DTOs.Admin.V1
 {
-    public class AdminUserDto : BaseUserDto
+    public class UserDto : BaseUserDto
     {
         public required Guid RoleId { get; set; }
 

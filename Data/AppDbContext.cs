@@ -6,14 +6,27 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options) { }
 
+    public DbSet<RefreshToken> RefreshToken { get; set; }
     public DbSet<Risk> Risk { get; set; }
     public DbSet<Control> Control { get; set; }
     public DbSet<RiskControl> RiskControl { get; set; }
     public DbSet<User> User { get; set; }
     public DbSet<Role> Role { get; set; }
-
+   
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasOne(r => r.User)
+                  .WithMany(r => r.RefreshTokens)
+                  .HasForeignKey(r => r.UserId)
+                  .HasPrincipalKey(u => u.UserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(id => id.RefreshTokenId);
+            entity.HasIndex(n => n.Token);
+        });
+
         modelBuilder.Entity<Role>(entity =>
         {
             // Unique index for Name

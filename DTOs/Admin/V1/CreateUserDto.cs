@@ -1,9 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using WebApplication1.DTOs;
 
-namespace WebApplication1.DTOs.Admin
+namespace WebApplication1.DTOs.Admin.V1
 {
-    public class CreateAdminUserDto : AuthRegisterDto
+    public class CreateUserDto : AuthRegisterDto
     {
         [Required]
         public Guid RoleId { get; set; }

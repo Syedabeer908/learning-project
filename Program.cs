@@ -1,18 +1,21 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using System.Text;
 using StackExchange.Redis;
 using System.Security.Claims;
-using WebApplication1.Seeders;
-using WebApplication1.Middlewares;
-using WebApplication1.Entities;
-using WebApplication1.Services;
-using WebApplication1.Interfaces;
-using WebApplication1.Repository;
+using System.Text;
+using WebApplication1;
 using WebApplication1.Common.Constants;
+using WebApplication1.Entities;
+using WebApplication1.Interfaces;
+using WebApplication1.Middlewares;
+using WebApplication1.Repository;
+using WebApplication1.Seeders;
+using WebApplication1.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +69,7 @@ builder.Services.AddScoped<IRepository<Risk>, RiskRepository>();
 builder.Services.AddScoped<IRepository<Control>, ControlRepository>();
 builder.Services.AddScoped<IRepository<RiskControl>, RiskControlRepository>();
 builder.Services.AddScoped<ISoftRepository, SoftRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserDomainService>();
@@ -112,8 +116,6 @@ builder.Services.AddAuthentication(options =>
 // swagger configuration with JWT support
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
-
     // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -155,6 +157,22 @@ Log.Logger = new LoggerConfiguration()
 // Replace default logging
 builder.Host.UseSerilog();
 
+// Adding Api Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+});
+builder.Services.AddVersionedApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+// swagerr configuration class
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
 var app = builder.Build();
 
 //seeding data
@@ -173,8 +191,19 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        foreach (var desc in provider.ApiVersionDescriptions)
+        {
+            options.SwaggerEndpoint(
+                $"/swagger/{desc.GroupName}/swagger.json",
+                desc.GroupName.ToUpperInvariant()
+            );
+        }
+    });
 }
 
 app.UseHttpsRedirection();

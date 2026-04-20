@@ -4,7 +4,7 @@ using WebApplication1.Common.Extensions;
 using WebApplication1.DTOs.Role;
 using WebApplication1.Services;
 
-namespace WebApplication1.Controllers
+namespace WebApplication1.Controllers.V1
 {
     [Authorize(Policy = "AdminOnly")]
     [ApiController]

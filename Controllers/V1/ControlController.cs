@@ -1,19 +1,19 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using WebApplication1.Common.Extensions;
-using WebApplication1.DTOs.RiskControl;
+using WebApplication1.DTOs.Control;
 using WebApplication1.Services;
 
-namespace WebApplication1.Controllers
+namespace WebApplication1.Controllers.V1
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class RiskControlController : ControllerBase
+    public class ControlController : ControllerBase
     {
-        private readonly RiskControlService _service;
+        private readonly ControlService _service;
 
-        public RiskControlController(RiskControlService service)
+        public ControlController(ControlService service)
         {
             _service = service;
         }
@@ -25,7 +25,7 @@ namespace WebApplication1.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}", Name = "GetRiskControlById")]
+        [HttpGet("{id}", Name = "GetControlById")]
         public async Task<IActionResult> GetByIdAsync(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -33,18 +33,17 @@ namespace WebApplication1.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddAsync([FromBody] CreateRiskControlDto dto)
+        public async Task<IActionResult> AddAsync([FromBody] CreateControlDto dto)
         {
             var userId = HttpContext.GetUserId();
             var result = await _service.AddAsync(userId, dto);
             if (result.Result == null)
                 return BadRequest(result);
-
-            return CreatedAtRoute("GetRiskControlById", new { id = result.Result.RiskControlId }, result);
+            return CreatedAtRoute("GetControlById", new { id = result.Result.ControlId }, result);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateRiskControlDto dto)
+        public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateControlDto dto)
         {
             var userId = HttpContext.GetUserId();
             var result = await _service.UpdateAsync(id, userId, dto);
@@ -68,7 +67,7 @@ namespace WebApplication1.Controllers
         }
 
         [HttpPatch("{id}")]
-        public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchRiskControlDto dto)
+        public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchControlDto dto)
         {
             var userId = HttpContext.GetUserId();
             var result = await _service.PatchAsync(id, userId, dto);

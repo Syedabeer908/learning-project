@@ -7,10 +7,11 @@ namespace WebApplication1.Middlewares
     public class ExceptionMiddleware
     {
         private readonly RequestDelegate _next;
-       
+        private readonly ErrorHelper _errorHelper;
         public ExceptionMiddleware(RequestDelegate next)
         {
             _next = next;
+            _errorHelper = new ErrorHelper();
         }
 
         public async Task Invoke(HttpContext context)
@@ -35,7 +36,7 @@ namespace WebApplication1.Middlewares
 
         private async Task throwException(HttpContext context, int statusCode, string message)
         {
-            var error = ErrorHelper.CreateErrors("Exception", message);
+            var error = _errorHelper.CreateErrors("Exception", message);
             await ErrorResponseWriter.WriteErrorAsync(context, statusCode, error);        
         } 
     }

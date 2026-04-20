@@ -6,15 +6,17 @@ using WebApplication1.Data;
 using WebApplication1.DTOs.Role;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
+using WebApplication1.Mappers;
 
 namespace WebApplication1.Services
 {
-    public class RoleService
+    public class RoleService 
     {
         private readonly IRoleRepository _repo;
         private readonly IUserRepository _userRepo;
         private readonly ISoftRepository _softRepo;
         private readonly RoleConstants _roleConstants;
+        private readonly RoleMapper _mapper;
         public RoleService(IRoleRepository repo, IUserRepository userRepo,
             ISoftRepository softRepo, IOptions<RoleConstants> roleOptions)
         {
@@ -22,40 +24,7 @@ namespace WebApplication1.Services
             _userRepo = userRepo;
             _softRepo = softRepo;
             _roleConstants = roleOptions.Value;
-        }
-
-        private RoleDto ToDto(Role role)
-        {
-            return new RoleDto
-            {
-                RoleId = role.RoleId,
-                RoleName = role.Name
-            };
-        }
-
-        private Role ToEntity(Guid userId, CreateRoleDto dto)
-        {
-            return new Role
-            {
-                RoleId = Guid.NewGuid(),
-                Name = dto.RoleName,
-                CreatedBy = userId
-            };
-        }
-
-        private void UpdateEntity(Role role, Guid userId, UpdateRoleDto dto)
-        {
-            role.Name = dto.RoleName;
-            role.LastUpdatedAt = DateTime.UtcNow;
-            role.LastUpdatedBy = userId;
-        }
-
-        private void PatchEntity(Role role, Guid userId, PatchRoleDto dto)
-        {
-            if (!string.IsNullOrEmpty(dto.RoleName))
-                role.Name = dto.RoleName;
-            role.LastUpdatedAt = DateTime.UtcNow;
-            role.LastUpdatedBy = userId;
+            _mapper = new RoleMapper();
         }
 
         private async Task<Role> CheckRoleExistAndGet(Guid id)
@@ -104,24 +73,24 @@ namespace WebApplication1.Services
         public async Task<ResultT<List<RoleDto>>> GetAllAsync()
         {
             var roles = await _repo.GetAllAsync();
-            var roleDtos = roles.Select(r => ToDto(r)).ToList();
+            var roleDtos = roles.Select(r => _mapper.ToDto(r)).ToList();
             return ResultT<List<RoleDto>>.Success(roleDtos);
         }
 
         public async Task<ResultT<RoleDto>> GetByIdAsync(Guid id)
         {
             var role = await CheckRoleExistAndGet(id);
-            return ResultT<RoleDto>.Success(ToDto(role));
+            return ResultT<RoleDto>.Success(_mapper.ToDto(role));
         }
 
         public async Task<ResultT<RoleDto>> AddAsync(Guid userId, CreateRoleDto dto)
         {
             await CheckRoleNameUnique(dto.RoleName);
-            var role = ToEntity(userId, dto);
+            var role = _mapper.ToEntity(userId, dto);
 
             await _repo.AddAsync(role);
 
-            return ResultT<RoleDto>.Success(ToDto(role));
+            return ResultT<RoleDto>.Success(_mapper.ToDto(role));
         }
 
         public async Task<ResultT<RoleDto>> UpdateAsync(Guid id, Guid userId, UpdateRoleDto dto)
@@ -130,11 +99,11 @@ namespace WebApplication1.Services
 
             await CheckRoleNameUnique(dto.RoleName, role.RoleId);
 
-            UpdateEntity(role, userId, dto);
+            _mapper.UpdateEntity(role, userId, dto);
 
             await _repo.UpdateAsync(role);
 
-            return ResultT<RoleDto>.Success(ToDto(role));
+            return ResultT<RoleDto>.Success(_mapper.ToDto(role));
         }
 
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
@@ -162,10 +131,10 @@ namespace WebApplication1.Services
             if (!string.IsNullOrEmpty(dto.RoleName))
                 await CheckRoleNameUnique(dto.RoleName, role.RoleId);
 
-            PatchEntity(role, userId, dto);
+            _mapper.PatchEntity(role, userId, dto);
 
             await _repo.UpdateAsync(role);
-            return ResultT<RoleDto>.Success(ToDto(role));
+            return ResultT<RoleDto>.Success(_mapper.ToDto(role));
         }
     }
 }

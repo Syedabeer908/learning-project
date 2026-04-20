@@ -4,6 +4,7 @@ using WebApplication1.Data;
 using WebApplication1.DTOs.Risk;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
+using WebApplication1.Mappers;
 
 namespace WebApplication1.Services
 {
@@ -11,51 +12,12 @@ namespace WebApplication1.Services
     {
         private readonly IRepository<Risk> _repo;
         private readonly ISoftRepository _softRepo;
-
+        private readonly RiskMapper _mapper;
         public RiskService(IRepository<Risk> repo, ISoftRepository softRepo)
         {
             _repo = repo;
             _softRepo = softRepo;
-        }
-
-        private RiskDto ToDto(Risk risk)
-        {
-            return new RiskDto
-            {
-                RiskId = risk.RiskId,
-                RiskTitle = risk.RiskTitle,
-                RiskDescription = risk.RiskDescription
-            };
-        }
-
-        private Risk ToEntity(Guid userId, CreateRiskDto dto)
-        {
-            return new Risk
-            {
-                RiskId = Guid.NewGuid(),
-                UserId = userId,
-                RiskTitle = dto.RiskTitle,
-                RiskDescription = dto.RiskDescription,
-                CreatedBy = userId
-            };
-        }
-
-        private void UpdateEntity(Risk risk, Guid userId, UpdateRiskDto dto)
-        {
-            risk.RiskTitle = dto.RiskTitle;
-            risk.RiskDescription = dto.RiskDescription;
-            risk.LastUpdatedAt = DateTime.UtcNow;
-            risk.LastUpdatedBy = userId;
-        }
-
-        private void PatchEntity(Risk risk, Guid userId, PatchRiskDto dto)
-        {
-            if (!string.IsNullOrEmpty(dto.RiskTitle))
-                risk.RiskTitle = dto.RiskTitle;
-            if (!string.IsNullOrEmpty(dto.RiskDescription))
-                risk.RiskDescription = dto.RiskDescription;
-            risk.LastUpdatedAt = DateTime.UtcNow;
-            risk.LastUpdatedBy = userId;
+            _mapper = new RiskMapper();
         }
 
         private async Task<Risk> CheckRiskExistAndGet(Guid id)
@@ -78,32 +40,32 @@ namespace WebApplication1.Services
         public async Task<ResultT<List<RiskDto>>> GetAllAsync()
         {
             var risks = await _repo.GetAllAsync();
-            var riskDtos = risks.Select(r => ToDto(r)).ToList();
+            var riskDtos = risks.Select(r => _mapper.ToDto(r)).ToList();
             return ResultT<List<RiskDto>>.Success(riskDtos);
         }
 
         public async Task<ResultT<RiskDto>> GetByIdAsync(Guid id)
         {
             var risk = await CheckRiskExistAndGet(id);
-            return ResultT<RiskDto>.Success(ToDto(risk));
+            return ResultT<RiskDto>.Success(_mapper.ToDto(risk));
         }
 
         public async Task<ResultT<RiskDto>> AddAsync(Guid userId, CreateRiskDto dto)
         {
-            var risk = ToEntity(userId, dto);
+            var risk = _mapper.ToEntity(userId, dto);
             await _repo.AddAsync(risk);
 
             var data = await CheckRiskExistAndGet(risk.RiskId);
 
-            return ResultT<RiskDto>.Success(ToDto(data));
+            return ResultT<RiskDto>.Success(_mapper.ToDto(data));
         }
 
         public async Task<ResultT<RiskDto>> UpdateAsync(Guid id, Guid userId, UpdateRiskDto dto)
         {
             var risk = await CheckRiskExistAndGet(id);
-            UpdateEntity(risk, userId, dto);
+            _mapper.UpdateEntity(risk, userId, dto);
             await _repo.UpdateAsync(risk);
-            return ResultT<RiskDto>.Success(ToDto(risk));
+            return ResultT<RiskDto>.Success(_mapper.ToDto(risk));
         }
 
         public async Task<Result> DeleteAsync(Guid id, Guid userId)
@@ -123,9 +85,9 @@ namespace WebApplication1.Services
         public async Task<ResultT<RiskDto>> PatchAsync(Guid id, Guid userId, PatchRiskDto dto)
         {
             var risk = await CheckRiskExistAndGet(id);
-            PatchEntity(risk, userId, dto);
+            _mapper.PatchEntity(risk, userId, dto);
             await _repo.UpdateAsync(risk);
-            return ResultT<RiskDto>.Success(ToDto(risk));
+            return ResultT<RiskDto>.Success(_mapper.ToDto(risk));
         }
     }
 }

@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using WebApplication1.Common.Results;
-using WebApplication1.DTOs.User;
-using WebApplication1.Entities;
+﻿using WebApplication1.Common.Results;
+using WebApplication1.DTOs;
 using WebApplication1.Interfaces;
+using WebApplication1.Mappers;
 
 namespace WebApplication1.Services
 {
@@ -10,75 +9,40 @@ namespace WebApplication1.Services
     {
         private readonly IUserRepository _repo;
         private readonly UserDomainService _userDomainService;
-        private readonly PasswordHasher<User> _hasher;
+        private readonly UserMapper _mapper;
 
         public UserService(IUserRepository repo, UserDomainService userDomainService)
         {
             _repo = repo;
             _userDomainService = userDomainService;
-            _hasher = new PasswordHasher<User>();
+            _mapper = new UserMapper();
         }
 
-        private UserDto ToDto(User user)
-        {
-            return new UserDto
-            {
-                UserId = user.UserId,
-                Username = user.Username,
-                Email = user.Email
-            };
-        }
-
-        private void UpdateEntity(User user, Guid userId, UpdateUserDto dto)
-        {
-            user.Username = dto.Username;
-            user.Email = dto.Email;
-
-            if (!string.IsNullOrWhiteSpace(dto.Password))
-                user.PasswordHash = _hasher.HashPassword(user, dto.Password);
-
-            user.LastUpdatedAt = DateTime.UtcNow;
-            user.LastUpdatedBy = userId;
-        }
-
-        private void PatchEntity(User user, Guid userId, PatchUserDto dto)
-        {
-            if (!string.IsNullOrEmpty(dto.Username))
-                user.Username = dto.Username;
-            if (!string.IsNullOrEmpty(dto.Email))
-                user.Email = dto.Email;
-            if (!string.IsNullOrEmpty(dto.Password))
-                user.PasswordHash = _hasher.HashPassword(user, dto.Password);
-
-            user.LastUpdatedAt = DateTime.UtcNow;
-            user.LastUpdatedBy = userId;
-        }
-
-        public async Task<ResultT<UserDto>> UpdateAsync(Guid id, Guid userId, UpdateUserDto dto)
+        public async Task<ResultT<BaseUserDto>> UpdateAsync(Guid id, Guid userId, BaseUpdateUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            UpdateEntity(user, userId, dto);
+            _mapper.UpdateEntity(user, userId, dto);
 
             await _repo.UpdateAsync(user);
 
-            return ResultT<UserDto>.Success(ToDto(user));
+            return ResultT<BaseUserDto>.Success(_mapper.ToDto(user));
         }
 
-        public async Task<ResultT<UserDto>> PatchAsync(Guid id, Guid userId, PatchUserDto dto)
+        public async Task<ResultT<BaseUserDto>> PatchAsync(Guid id, Guid userId, BasePatchUserDto dto)
         {
             var user = await _userDomainService.CheckUserExistAndGet(id);
 
             if (!string.IsNullOrEmpty(dto.Email))
                 await _userDomainService.CheckEmailUnique(dto.Email, user.UserId);
 
-            PatchEntity(user, userId, dto);
+            _mapper.PatchEntity(user, userId, dto);
 
             await _repo.UpdateAsync(user);
 
-            return ResultT<UserDto>.Success(ToDto(user));
+            return ResultT<BaseUserDto>.Success(_mapper.ToDto(user));
         }
     }
 }

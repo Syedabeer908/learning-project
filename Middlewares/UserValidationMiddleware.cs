@@ -12,12 +12,14 @@ namespace WebApplication1.Middlewares
         private readonly RequestDelegate _next;
         private readonly IServiceProvider _provider;
         private readonly ILogger<UserValidationMiddleware> _logger;
+        private readonly ErrorHelper _errorHelper;
 
-        public  UserValidationMiddleware(RequestDelegate next, IServiceProvider provider, ILogger<UserValidationMiddleware> logger)
+        public UserValidationMiddleware(RequestDelegate next, IServiceProvider provider, ILogger<UserValidationMiddleware> logger)
         {
             _next = next;
             _provider = provider;
             _logger = logger;
+            _errorHelper = new ErrorHelper();
         }
 
         private async Task<User?> GetUserWithCacheAsync(Guid userId, string prefix)
@@ -35,7 +37,7 @@ namespace WebApplication1.Middlewares
 
             var adminService = scope.ServiceProvider.GetRequiredService<AdminService>();
 
-            var user = await adminService.GetByIdInEntityAsync(userId);
+            var user = await adminService.GetByIdAsync(userId);
 
             if (user == null)
                 return null;
@@ -89,15 +91,15 @@ namespace WebApplication1.Middlewares
             await _next(context);
         }
 
-        private static Task UnauthorizedResponse(HttpContext context, string message)
+        private Task UnauthorizedResponse(HttpContext context, string message)
         {
-            var error = ErrorHelper.CreateErrors("Unauthorized", message);
+            var error = _errorHelper.CreateErrors("Unauthorized", message);
             return ErrorResponseWriter.WriteErrorAsync(context, 401, error);
         }
 
-        private static Task ForbiddenResponse(HttpContext context, string message)
+        private Task ForbiddenResponse(HttpContext context, string message)
         {
-            var error = ErrorHelper.CreateErrors("Forbidden", message);
+            var error = _errorHelper.CreateErrors("Forbidden", message);
             return ErrorResponseWriter.WriteErrorAsync(context, 403, error);
         }
     }

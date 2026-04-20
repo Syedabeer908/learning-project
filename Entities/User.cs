@@ -30,5 +30,6 @@ namespace WebApplication1.Entities
         public ICollection<Risk> Risks { get; set; } = new List<Risk>();
         public ICollection<Control> Controls { get; set; } = new List<Control>();
         public ICollection<RiskControl> RiskControls { get; set; } = new List<RiskControl>();
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

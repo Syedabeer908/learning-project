@@ -1,21 +1,32 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Common.Extensions;
-using WebApplication1.DTOs.Admin;
+using WebApplication1.Common.Results;
+using WebApplication1.DTOs;
+using WebApplication1.DTOs.Admin.V1;
+using WebApplication1.Mappers.V1;
 using WebApplication1.Services;
 
-namespace WebApplication1.Controllers
+
+namespace WebApplication1.Controllers.V1
 {
     [Authorize(Policy = "AdminOnly")]
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}")]
     public class AdminController : ControllerBase
     {
         private readonly AdminService _service;
+        private readonly AdminMapper _mapper;
+        private readonly ErrorHelper _errorHelper;
+        private readonly ResultHelper _resultHelper;
 
         public AdminController(AdminService service)
         {
             _service = service;
+            _mapper = new AdminMapper();
+            _errorHelper = new ErrorHelper();
+            _resultHelper = new ResultHelper();
         }
 
         [HttpGet("users")]
@@ -24,8 +35,16 @@ namespace WebApplication1.Controllers
                 [FromQuery] Guid? lastId,
                 [FromQuery] int pageSize = 10 )
         {
-            var result = await _service.GetAllAsync(pageSize, search, isActive, lastId);
-            return Ok(result);
+            var data = await _service.GetAllAsync(pageSize, search, isActive, lastId);
+
+            if (data == null) 
+            {
+                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
+                return NotFound(_resultHelper.Failure<UserDto>(404, errors));
+            }
+
+            var result = data.Select(item => _mapper.ToDto(item)).ToList();
+            return Ok(_resultHelper.Success<UserDto>(result));
         }
 
         [HttpGet("users/{id}", Name = "GetUserById")]
@@ -36,22 +55,31 @@ namespace WebApplication1.Controllers
         }
         
         [HttpPost("users")]
-        public async Task<IActionResult> AddAsync([FromBody] CreateAdminUserDto dto)
+        public async Task<IActionResult> AddAsync([FromBody] CreateUserDto dto)
         {
             var userId = HttpContext.GetUserId();
-            var result = await _service.AddAsync(userId, dto);
-            if (result.Result == null)
-                return BadRequest(result);
+            var entity = _mapper.ToEntity(userId, dto);
+
+            var data = await _service.AddAsync(userId, entity);
+
+            if (data == null)
+            {
+                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
+                return NotFound(_resultHelper.Failure<UserDto>(404, errors));
+            }
+
+            var dtoResult = _mapper.ToDto(data);
+            var result = _resultHelper.Success<UserDto>(dtoResult);
 
             return CreatedAtRoute(
                 "GetUserById",
-                new { id = result.Result.UserId },
+                new { id = dtoResult.UserId },
                 result
             );
         }
 
         [HttpPut("users/{id}")]
-        public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] UpdateAdminUserDto dto)
+        public async Task<IActionResult> UpdateAsync(Guid id, [FromBody] BaseUpdateUserDto dto)
         {
             var userId = HttpContext.GetUserId();
             var result = await _service.UpdateAsync(id, userId, dto);
@@ -75,7 +103,7 @@ namespace WebApplication1.Controllers
         }
 
         [HttpPatch("users/{id}")]
-        public async Task<IActionResult> PatchAsync(Guid id, [FromBody] PatchAdminUserDto dto)
+        public async Task<IActionResult> PatchAsync(Guid id, [FromBody] BasePatchUserDto dto)
         {
             var userId = HttpContext.GetUserId();
             var result = await _service.PatchAsync(id, userId, dto);

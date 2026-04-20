@@ -2,16 +2,16 @@
 {
     public class ErrorHelper
     {
-        public static List<Error> CreateErrors(List<int> codes, List<string> messages)
+        public List<Error> CreateErrors(List<string> codes, List<string> messages)
         {
             return messages.Select((message, index) => new Error
             {
-                Code = codes[index].ToString()  ,
+                Code = codes[index].ToString(),
                 Message = message
             }).ToList();
         }
 
-        public static List<Error> CreateErrors(string code, List<string> messages)
+        public List<Error> CreateErrors(string code, List<string> messages)
         {
             return messages.Select(message => new Error
             {
@@ -20,7 +20,7 @@
             }).ToList();
         }
 
-        public static List<Error> CreateErrors(string code, string message)
+        public List<Error> CreateErrors(string code, string message)
         {
             return new List<Error>
             {

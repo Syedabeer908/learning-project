@@ -96,6 +96,28 @@ namespace WebApplication1.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RefreshToken",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RefreshTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Token = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRevoked = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshToken", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshToken_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "UserId");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Risk",
                 columns: table => new
                 {
@@ -176,6 +198,21 @@ namespace WebApplication1.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Control_UserId",
                 table: "Control",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_RefreshTokenId",
+                table: "RefreshToken",
+                column: "RefreshTokenId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_Token",
+                table: "RefreshToken",
+                column: "Token");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_UserId",
+                table: "RefreshToken",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -264,6 +301,9 @@ namespace WebApplication1.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "RefreshToken");
+
             migrationBuilder.DropTable(
                 name: "RiskControl");
 
