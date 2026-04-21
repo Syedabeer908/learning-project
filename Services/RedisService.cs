@@ -15,17 +15,17 @@ namespace WebApplication1.Services
             _logger = logger;
         }
 
-        private async Task<string> CreateKey(string prefix, Guid id)
+        private async Task<string> CreateKey(string prefix, string keyId)
         {
-            var key = $"{prefix}:{id}";
+            var key = $"{prefix}:{keyId}";
             return key;
         }
 
-        public async Task SetAsync(string prefix, Guid id, string value, TimeSpan? expiry = null)
+        public async Task SetAsync(string prefix, string keyId, string value, TimeSpan? expiry = null)
         {
             try 
             {
-                var key = await CreateKey(prefix, id);
+                var key = await CreateKey(prefix, keyId);
                 var expireTime = expiry ?? _defaultTime;
                 await _db.StringSetAsync(key, value, expireTime);
             }
@@ -36,11 +36,11 @@ namespace WebApplication1.Services
             
         }
             
-        public async Task<string?> GetAsync(string prefix, Guid id)
+        public async Task<string?> GetAsync(string prefix, string keyId)
         {
             try
             {
-                var key = await CreateKey(prefix, id);
+                var key = await CreateKey(prefix, keyId);
                 return await _db.StringGetAsync(key);
             }
             catch
@@ -50,17 +50,31 @@ namespace WebApplication1.Services
             }
         }
 
-        public async Task RemoveAsync(string prefix, Guid id)
+        public async Task RemoveAsync(string prefix, string keyId)
         {
             try
             {
-                var key = await CreateKey(prefix, id);
+                var key = await CreateKey(prefix, keyId);
                 await _db.KeyDeleteAsync(key);
 
             }
             catch
             {
                 _logger.LogWarning("Redis Unavailable");
+            }
+        }
+
+        public async Task<bool> ExistAsync(string prefix, string keyId)
+        {
+            try
+            {
+                var key = await CreateKey(prefix, keyId);
+                return await _db.KeyExistsAsync(key);
+            }
+            catch
+            {
+                _logger.LogWarning("Redis Unavailable");
+                return false;
             }
         }
     }

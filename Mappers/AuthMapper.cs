@@ -37,6 +37,7 @@ namespace WebApplication1.Mappers
                 RefreshTokenId = Guid.NewGuid(),
                 Token = token,
                 ExpiryDate = DateTime.UtcNow.AddDays(7),
+                FamilyId = Guid.NewGuid(),
                 UserId = userId,
             };
             return refreshToken;

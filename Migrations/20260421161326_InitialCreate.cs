@@ -44,6 +44,7 @@ namespace WebApplication1.Migrations
                     Username = table.Column<string>(type: "nvarchar(200)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ProfileImagePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     TokenVersion = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -104,8 +105,17 @@ namespace WebApplication1.Migrations
                     RefreshTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Token = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FamilyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReplacedByTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsRevoked = table.Column<bool>(type: "bit", nullable: false)
+                    IsRevoked = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    LastUpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastUpdatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -199,6 +209,11 @@ namespace WebApplication1.Migrations
                 name: "IX_Control_UserId",
                 table: "Control",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshToken_FamilyId",
+                table: "RefreshToken",
+                column: "FamilyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_RefreshTokenId",

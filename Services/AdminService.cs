@@ -38,22 +38,22 @@ namespace WebApplication1.Services
                 throw new BadRequestException("You are not allowed to update/delete this user.");
         }
 
-        private Task<string> CreateValueForCacheAfterUserUpdate(User user)
+        private async Task<string> CreateValueForCacheAfterUserUpdate(User user)
         {
-            var json = JsonSerializer.Serialize(new
+            var json = JsonSerializer.Serialize(new RedisUserDto
             {
                 IsActive = user.IsActive,
                 IsDeleted = user.IsDeleted,
                 TokenVersion = user.TokenVersion
             });
-            return Task.FromResult(json);
+            return json;
         }
 
         private async Task CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
         {
             var prefix = _roleConstants.User;
             var data = await CreateValueForCacheAfterUserUpdate(user);
-            await _redis.SetAsync(prefix, userId, data, TimeSpan.FromHours(1));
+            await _redis.SetAsync(prefix, userId.ToString(), data, TimeSpan.FromHours(1));
             
         }
 

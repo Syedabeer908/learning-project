@@ -28,6 +28,10 @@ namespace WebApplication1.Middlewares
             {
                 await throwException(context, 400, ex.Message);
             }
+            catch (ForbiddenException ex)
+            {
+                await throwException(context, 403, ex.Message);
+            }
             catch (Exception ex)
             {
                 await throwException(context, 500, $"Internal server error: {ex.ToString()}");

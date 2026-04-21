@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasIndex(id => id.RefreshTokenId);
+            entity.HasIndex(id => id.UserId);
+            entity.HasIndex(id => id.FamilyId);
             entity.HasIndex(n => n.Token);
         });
 

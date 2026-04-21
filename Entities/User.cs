@@ -19,11 +19,13 @@ namespace WebApplication1.Entities
         [Required]
         [MaxLength(100)]
         [EmailAddress]
-        public string Email { get; set; }
+        public string Email { get; set; } 
 
         [Required]
         [MaxLength(500)]
         public string PasswordHash { get; set; }
+
+        public string? ProfileImagePath { get; set; }
         public bool IsActive { get; set; } = true;
         public int TokenVersion { get; set; } = 0;
 

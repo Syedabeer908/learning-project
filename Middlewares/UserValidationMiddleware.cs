@@ -2,6 +2,7 @@
 using System.Text.Json;
 using WebApplication1.Common.Responses;
 using WebApplication1.Common.Results;
+using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Services;
 
@@ -27,7 +28,7 @@ namespace WebApplication1.Middlewares
             using var scope = _provider.CreateScope();
             var RedisService = scope.ServiceProvider.GetRequiredService<RedisService>();
 
-            var cachedUser = await RedisService.GetAsync(prefix, userId);
+            var cachedUser = await RedisService.GetAsync(prefix, userId.ToString());
 
             if (!string.IsNullOrEmpty(cachedUser))
             {
@@ -43,14 +44,14 @@ namespace WebApplication1.Middlewares
                 return null;
 
            
-            var json = JsonSerializer.Serialize(new
+            var json = JsonSerializer.Serialize(new RedisUserDto
             {
                 IsActive = user.IsActive,
                 IsDeleted = user.IsDeleted,
                 TokenVersion = user.TokenVersion
             });
 
-            await RedisService.SetAsync(prefix, userId, json, TimeSpan.FromHours(1));
+            await RedisService.SetAsync(prefix, userId.ToString(), json, TimeSpan.FromHours(1));
 
             return user;
         }

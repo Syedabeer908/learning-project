@@ -80,8 +80,9 @@ builder.Services.AddScoped<RiskService>();
 builder.Services.AddScoped<ControlService>();
 builder.Services.AddScoped<RiskControlService>();
 builder.Services.AddScoped<RedisService>();
+builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<FileService>();
 builder.Services.AddScoped<RoleConstants>();
-
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260420164044_InitialCreate")]
+    [Migration("20260421161326_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -86,13 +86,40 @@ namespace WebApplication1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LastUpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("RefreshTokenId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Token")
@@ -103,6 +130,8 @@ namespace WebApplication1.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
 
                     b.HasIndex("RefreshTokenId");
 
@@ -315,6 +344,9 @@ namespace WebApplication1.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ProfileImagePath")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uniqueidentifier");

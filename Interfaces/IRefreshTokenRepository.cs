@@ -6,6 +6,13 @@ namespace WebApplication1.Interfaces
     public interface IRefreshTokenRepository
     {
         Task<RefreshToken?> GetByTokenAsync(string token);
-        Task AddRefreshTokenAsync(RefreshToken refreshToken);
+        Task <List<RefreshToken>> GetByFamilyIdAsync(Guid id);
+        Task<List<RefreshToken>> GetByUserIdAsync(Guid id);
+
+        Task AddAsync(RefreshToken token);
+        Task UpdateAsync(RefreshToken token);
+        Task UpdateRangeAsync(List<RefreshToken> tokens);
+
+
     }
 }

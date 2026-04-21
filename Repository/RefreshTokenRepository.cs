@@ -17,12 +17,39 @@ namespace WebApplication1.Repository
 
         public async Task<RefreshToken?> GetByTokenAsync(string token)
         {
-            return await _context.RefreshToken.AsNoTracking().FirstOrDefaultAsync(r => r.Token == token);
+            return await _context.RefreshToken.AsNoTracking().
+                FirstOrDefaultAsync(r => r.Token == token);
         }
 
-        public async Task AddRefreshTokenAsync(RefreshToken refreshToken)
+        public async Task<List<RefreshToken>> GetByFamilyIdAsync(Guid familyId)
+        {
+            var query = _context.RefreshToken.AsNoTracking();
+            query = query.Where(f => f.FamilyId == familyId);
+            return await query.ToListAsync();
+        }
+
+        public async Task<List<RefreshToken>> GetByUserIdAsync(Guid userId)
+        {
+            var query = _context.RefreshToken.AsNoTracking();
+            query = query.Where(f => f.UserId == userId);
+            return await query.ToListAsync();
+        }
+
+        public async Task AddAsync(RefreshToken refreshToken)
         {
             await _context.AddAsync(refreshToken);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(RefreshToken refreshToken)
+        {
+            _context.Update(refreshToken);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateRangeAsync(List<RefreshToken> refreshTokens)
+        {
+            _context.UpdateRange(refreshTokens);
             await _context.SaveChangesAsync();
         }
     }

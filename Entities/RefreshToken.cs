@@ -2,19 +2,21 @@
 
 namespace WebApplication1.Entities
 {
-    public class RefreshToken
+    public class RefreshToken : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
-
         [Required]
         public Guid RefreshTokenId { get; set; }
 
         [Required]
-        public string Token { get; set; } = "";
+        public string Token { get; set; }
 
         [Required]
         public Guid UserId { get; set; }
+
+        [Required]
+        public Guid FamilyId { get; set; }
+
+        public Guid? ReplacedByTokenId { get; set; }
 
         [Required]
         public DateTime ExpiryDate { get; set; }
