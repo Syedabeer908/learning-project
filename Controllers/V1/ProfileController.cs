@@ -1,60 +1,54 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Extensions;
 using WebApplication1.Common.Results;
 using WebApplication1.DTOs;
 using WebApplication1.Mappers;
 using WebApplication1.Services;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WebApplication1.Controllers.V1
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/profile")]
     public class ProfileController : ControllerBase
     {
         private readonly ProfileService _service;
-        private readonly ProfileImageMapper _mapper;
-        private readonly ErrorHelper _errorHelper;
         private readonly ResultHelper _resultHelper;
 
         public ProfileController(ProfileService service) 
         { 
             _service = service;
-            _mapper = new ProfileImageMapper();
-            _errorHelper = new ErrorHelper();
             _resultHelper = new ResultHelper();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetProfileImageAsync()
+        [HttpGet("image")]
+        public async Task<IActionResult> GetProfileImageFileAsync()
         {
             var userId = HttpContext.GetUserId();
-            var data = await _service.GetProfile(userId);
-            if (data.IsNullOrEmpty())
-            {
-                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
-                return NotFound(_resultHelper.Failure<GetProfileImageDto>(404, errors));
-            }
 
-            var result = _mapper.ToDto(data);
-            return Ok(_resultHelper.Success<GetProfileImageDto>(result));
+            var user = await _service.CheckUserExistAndGet(userId);
+
+            var data = _service.GetProfileStream(user);
+
+            if (data == null)
+                throw new NotFoundException("No content found");
+
+            Response.Headers["Cache-Control"] = "public,max-age=31536000";
+
+            return File(data.Value.FileStream, data.Value.FileType);
         }
 
         [HttpPost("upload-image")]
-        public async Task<IActionResult> UploadProfileImageAsync(IFormFile file)
+        public async Task<IActionResult> UploadProfileImageAsync([FromForm] CreateProfileImageDto dto)
         {
             var userId = HttpContext.GetUserId();
-            var data = await _service.UpdateProfileImage(userId, file);
-            if (data == null)
-            {
-                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
-                return NotFound(_resultHelper.Failure<GetProfileImageDto>(404, errors));
-            }
-
-            var result = _mapper.ToDto(data);
-            return Ok(_resultHelper.Success<GetProfileImageDto>(result));
+            await _service.UpdateProfileImage(userId, dto.File);
+            return Ok(_resultHelper.Success());
         }
 
         [HttpPost("delete-image")]
@@ -63,8 +57,7 @@ namespace WebApplication1.Controllers.V1
             var userId = HttpContext.GetUserId();
             var user = await _service.CheckUserExistAndGet(userId);
 
-            await _service.UpdateProfile(user);
-
+            await _service.DeleteProfile(user);
             return Ok(_resultHelper.Success());
         }
 

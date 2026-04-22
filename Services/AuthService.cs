@@ -8,10 +8,13 @@ using System.Text;
 using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
+using WebApplication1.Common.Email;
+using WebApplication1.Common.Email.EmailTemplates;
 using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
 using WebApplication1.Mappers;
+using WebApplication1.Settings;
 
 namespace WebApplication1.Services
 {
@@ -20,22 +23,27 @@ namespace WebApplication1.Services
         private readonly IUserRepository _userRepo;
         private readonly IRoleRepository _roleRepo;
         private readonly IRefreshTokenRepository _refreshTokenRepo;
+        private readonly ILogger<AuthService> _logger;
         private readonly RedisService _redisServcie;
-        private readonly AuthConstants _authConstants;
-        private readonly RoleConstants _roleConstants;
+        private readonly EmailService _emailService;
+        private readonly AuthSettings _authSettings;
+        private readonly RoleSettings _roleSettings;
         private readonly AuthMapper _mapper;
         private readonly PasswordHasher<User> _hasher;
+       
 
         public AuthService(IUserRepository userRepo, IRoleRepository roleRepo,
-            IRefreshTokenRepository refreshTokenRepo, RedisService redisServcie,
-            IOptions<AuthConstants> authOptions, IOptions<RoleConstants> rolesettings)
+            IRefreshTokenRepository refreshTokenRepo, ILogger<AuthService> logger, RedisService redisServcie,
+            EmailService emailService, IOptions<AuthSettings> authOptions, IOptions<RoleSettings> roleOptions)
         {
             _userRepo = userRepo;
             _roleRepo = roleRepo;
             _refreshTokenRepo = refreshTokenRepo;
+            _logger = logger;
             _redisServcie = redisServcie;
-            _authConstants = authOptions.Value;
-            _roleConstants = rolesettings.Value;
+            _emailService = emailService;
+            _authSettings = authOptions.Value;
+            _roleSettings = roleOptions.Value;
             _mapper = new AuthMapper();
             _hasher = new PasswordHasher<User>();
         }
@@ -64,14 +72,14 @@ namespace WebApplication1.Services
 
         private string GenerateToken(User user)
         {
-            var secretKey = _authConstants.Key;
+            var secretKey = _authSettings.Key;
 
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.Name),
-                new Claim(ClaimTypes.Version, user.TokenVersion.ToString())
+                new Claim(ClaimTypes.Version, user.TokenVersion.ToString() ?? "0")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -79,7 +87,7 @@ namespace WebApplication1.Services
 
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(_authConstants.ExpiryHours),
+                expires: DateTime.UtcNow.AddHours(_authSettings.ExpiryHours),
                 signingCredentials: creds
             );
 
@@ -187,13 +195,15 @@ namespace WebApplication1.Services
         public async Task<ResultT<AuthResponseDto>> RegisterAsync(AuthRegisterDto dto)
         {
             await CheckEmailUnique(dto.Email);
-            var role = await _roleRepo.GetByNameAsync(_roleConstants.User);
+            var role = await _roleRepo.GetByNameAsync(_roleSettings.User);
 
             var user = _mapper.ToEntity(dto, role);
 
             await _userRepo.AddAsync(user);
 
-            return await IssueTokens(user);
+            var createdUser = await CheckUserExistAndGet(user.UserId);
+
+            return await IssueTokens(createdUser);
         }
 
         public async Task<ResultT<AuthResponseDto>> LoginAsync(AuthLoginDto dto)
@@ -206,6 +216,13 @@ namespace WebApplication1.Services
             await ValidatePassword(user, dto.Password);
 
             await RevokeAllTokensOfUser(user.UserId);
+
+            var template = new RegisterEmailTemplate();
+            var registerTemplate = template.Template(user);
+            _logger.LogInformation(
+            $"Template Email: {registerTemplate.ToEmail}, Subject: {registerTemplate.Subject}");
+
+            await _emailService.SendEmailAsync(registerTemplate);
 
             return await IssueTokens(user);
         }

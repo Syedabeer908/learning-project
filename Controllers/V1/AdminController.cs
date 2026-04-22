@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Extensions;
 using WebApplication1.Common.Results;
 using WebApplication1.DTOs;
@@ -18,14 +19,12 @@ namespace WebApplication1.Controllers.V1
     {
         private readonly AdminService _service;
         private readonly AdminMapper _mapper;
-        private readonly ErrorHelper _errorHelper;
         private readonly ResultHelper _resultHelper;
 
         public AdminController(AdminService service)
         {
             _service = service;
             _mapper = new AdminMapper();
-            _errorHelper = new ErrorHelper();
             _resultHelper = new ResultHelper();
         }
 
@@ -38,10 +37,7 @@ namespace WebApplication1.Controllers.V1
             var data = await _service.GetAllAsync(pageSize, search, isActive, lastId);
 
             if (data == null) 
-            {
-                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
-                return NotFound(_resultHelper.Failure<UserDto>(404, errors));
-            }
+                throw new NotFoundException("No content found");
 
             var result = data.Select(item => _mapper.ToDto(item)).ToList();
             return Ok(_resultHelper.Success<UserDto>(result));
@@ -63,10 +59,7 @@ namespace WebApplication1.Controllers.V1
             var data = await _service.AddAsync(userId, entity);
 
             if (data == null)
-            {
-                var errors = _errorHelper.CreateErrors("NulldDataException", "No content found");
-                return NotFound(_resultHelper.Failure<UserDto>(404, errors));
-            }
+                throw new NotFoundException("No content found");
 
             var dtoResult = _mapper.ToDto(data);
             var result = _resultHelper.Success<UserDto>(dtoResult);

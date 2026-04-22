@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -9,6 +11,7 @@ using StackExchange.Redis;
 using System.Security.Claims;
 using System.Text;
 using WebApplication1;
+using WebApplication1.Validator;
 using WebApplication1.Common.Constants;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
@@ -16,6 +19,7 @@ using WebApplication1.Middlewares;
 using WebApplication1.Repository;
 using WebApplication1.Seeders;
 using WebApplication1.Services;
+using WebApplication1.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,13 +49,17 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 });
 
 // Adding AuthConstants
-builder.Services.Configure<AuthConstants>(
+builder.Services.Configure<AuthSettings>(
     builder.Configuration.GetSection("SecretKeys:Jwt")
 );
 
 // Adding RoleConstants
-builder.Services.Configure<RoleConstants>(
+builder.Services.Configure<RoleSettings>(
     builder.Configuration.GetSection("StartUpRole"));
+
+// Adding RoleConstants
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
 
 // Adding Authorization policies
 var adminRole = builder.Configuration["StartUpRole:Admin"] ?? "Admin";
@@ -61,6 +69,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole(adminRole));
 });
+
+builder.Services
+    .AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters();
+
+builder.Services.AddValidatorsFromAssemblyContaining<UploadProfileImageRequestValidator>();
 
 // Adding scoped (DI) 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -81,13 +95,15 @@ builder.Services.AddScoped<ControlService>();
 builder.Services.AddScoped<RiskControlService>();
 builder.Services.AddScoped<RedisService>();
 builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<FileService>();
-builder.Services.AddScoped<RoleConstants>();
+builder.Services.AddScoped<RoleSettings>();
+builder.Services.AddScoped<EmailSettings>();
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration
     .GetSection("SecretKeys:Jwt")
-    .Get<AuthConstants>();
+    .Get<AuthSettings>();
 
 var jwtSettingsKey = jwtSettings?.Key ?? "3d7tt#JbeX!&FY3!%e+XQE8xtrHFcpqc";
 
@@ -176,18 +192,18 @@ builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 var app = builder.Build();
 
-//seeding data
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+////seeding data
+//using (var scope = app.Services.CreateScope())
+//{
+//    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    context.Database.Migrate();
+//    context.Database.Migrate();
 
-    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleConstants>>();
-    var seeder = new DbSeeder(context, roleSettings);
+//    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleSettings>>();
+//    var seeder = new DbSeeder(context, roleSettings);
 
-    await seeder.SeedAsync();
-}
+//    await seeder.SeedAsync();
+//}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

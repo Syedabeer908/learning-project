@@ -15,6 +15,11 @@ namespace WebApplication1.Services
             _repo = repo;
         }
 
+        private string BuildFolderPath(Guid id)
+        {
+            return "users/" + id + "/profile";
+        }
+
         public async Task<User> CheckUserExistAndGet(Guid targetUserId)
         {
             var user = await _repo.GetByIdAsync(targetUserId);
@@ -24,30 +29,27 @@ namespace WebApplication1.Services
             return user;
         }
 
-        public async Task<string> UpdateProfileImage(Guid userId, IFormFile file)
+        public (Stream FileStream, string FileType)? GetProfileStream(User user)
+        {
+            if (user.ProfileImagePath == null)
+                throw new NotFoundException("File not found.");
+
+            return _fileService.GetFileStream(user.ProfileImagePath);
+        }
+
+        public async Task UpdateProfileImage(Guid userId, IFormFile file)
         {
             var user = await CheckUserExistAndGet(userId);
 
-            var folderPath = "users/profile/images/" + userId;
+            var folderPath = BuildFolderPath(userId);
             var imagePath = await _fileService.UploadFile(file, folderPath);
 
-            await UpdateProfile(user, imagePath);
-
-            return imagePath;
+            await DeleteProfile(user, imagePath);
         }
 
-        public async Task<string?> GetProfile(Guid userId)
+        public async Task DeleteProfile(User user, string? filepath = null )
         {
-            var user = await CheckUserExistAndGet(userId);
-            return user.ProfileImagePath;
-        }
-
-        public async Task UpdateProfile(User user, string? filepath = null )
-        {
-            if (user == null )
-                return;
-
-            if(user.ProfileImagePath != null)
+            if (!string.IsNullOrEmpty(user.ProfileImagePath))
             {
                 await _fileService.DeleteFile(user.ProfileImagePath);
             }

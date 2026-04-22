@@ -17,10 +17,5 @@
             return Result.Success();
         }
 
-        public ResultT<T> Failure<T>(int code, List<Error> errors ) where T : class
-        {
-            return ResultT<T>.Failure(code, errors);
-        }
-
     }
 }

@@ -2,13 +2,13 @@
 using System.Text.Json;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Results;
-using WebApplication1.Common.Constants;
 using WebApplication1.Data;
 using WebApplication1.Entities;
 using WebApplication1.DTOs;
 using WebApplication1.DTOs.Admin.V1;
 using WebApplication1.Interfaces;
 using WebApplication1.Mappers.V1;
+using WebApplication1.Settings;
 
 namespace WebApplication1.Services
 {
@@ -18,23 +18,23 @@ namespace WebApplication1.Services
         private readonly ISoftRepository _softRepo;
         private readonly UserDomainService _userDomainService;
         private readonly RedisService _redis;
-        private readonly RoleConstants _roleConstants;
+        private readonly RoleSettings _roleSettings;
         private readonly AdminMapper _mapper;
 
         public AdminService(IUserRepository repo, ISoftRepository softRepo,
-            UserDomainService userDomainService, RedisService redis, IOptions<RoleConstants> roleOptions)
+            UserDomainService userDomainService, RedisService redis, IOptions<RoleSettings> roleOptions)
         {
             _repo = repo;
             _softRepo = softRepo;
             _userDomainService = userDomainService;
             _redis = redis;
-            _roleConstants = roleOptions.Value;
+            _roleSettings = roleOptions.Value;
             _mapper = new AdminMapper();
         }
 
         private async Task CheckIsAdmin(string roleName)
         {
-            if (roleName != null && roleName == _roleConstants.Admin)
+            if (roleName != null && roleName == _roleSettings.Admin)
                 throw new BadRequestException("You are not allowed to update/delete this user.");
         }
 
@@ -51,7 +51,7 @@ namespace WebApplication1.Services
 
         private async Task CreateOrUpdateCacheAfterUserUpdate(Guid userId, User user)
         {
-            var prefix = _roleConstants.User;
+            var prefix = _roleSettings.User;
             var data = await CreateValueForCacheAfterUserUpdate(user);
             await _redis.SetAsync(prefix, userId.ToString(), data, TimeSpan.FromHours(1));
             
@@ -67,7 +67,7 @@ namespace WebApplication1.Services
         public async Task<Role?> GetRole(string? roleName = null)
         {
             if (roleName == null)
-                roleName = _roleConstants.User;
+                roleName = _roleSettings.User;
 
             var role = await _userDomainService.GetRoleByNameAsync(roleName);
             return role;
