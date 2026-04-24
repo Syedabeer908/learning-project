@@ -21,12 +21,6 @@ namespace WebApplication1.Repository
                 FirstOrDefaultAsync(r => r.Token == token);
         }
 
-        public async Task<List<RefreshToken>> GetByFamilyIdAsync(Guid familyId)
-        {
-            var query = _context.RefreshToken.AsNoTracking();
-            query = query.Where(f => f.FamilyId == familyId);
-            return await query.ToListAsync();
-        }
 
         public async Task<List<RefreshToken>> GetByUserIdAsync(Guid userId)
         {
@@ -47,10 +41,18 @@ namespace WebApplication1.Repository
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateRangeAsync(List<RefreshToken> refreshTokens)
+        public async Task UpdateRangeAsync(Guid userId)
         {
-            _context.UpdateRange(refreshTokens);
-            await _context.SaveChangesAsync();
+            await _context.RefreshToken
+                .Where(x => x.UserId == userId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.IsRevoked, true)
+                );
+        }
+
+        public async Task DeleteRangeAsync(Guid userId)
+        {
+            await _context.RefreshToken.Where(x => x.UserId == userId).ExecuteDeleteAsync();
         }
     }
 }

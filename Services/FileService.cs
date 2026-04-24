@@ -1,18 +1,20 @@
-﻿using System.IO;
+﻿using Microsoft.Extensions.Options;
+using System.IO;
 using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
+using WebApplication1.Settings;
 
 namespace WebApplication1.Services
 {
     public class FileService
     {
-        
+        private readonly FileSettings _fileSettings;
         private readonly string _basePath;
 
-        public FileService()
+        public FileService(IOptions<FileSettings> fileOptions)
         {
-            var baseStoragePath = "D:\\AppStorage";
-            _basePath = Path.Combine(baseStoragePath, "uploads");
+            _fileSettings = fileOptions.Value;
+            _basePath = Path.Combine(_fileSettings.BasePath, "uploads");
         }
 
         private string GetContentType(string path)

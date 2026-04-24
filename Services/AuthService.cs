@@ -1,18 +1,19 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Hangfire;
+using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
+using WebApplication1.Common.Parsers;
 using WebApplication1.Common.Results;
-using WebApplication1.Common.Email;
-using WebApplication1.Common.Email.EmailTemplates;
 using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
+using WebApplication1.Jobs;
 using WebApplication1.Mappers;
 using WebApplication1.Settings;
 
@@ -25,39 +26,30 @@ namespace WebApplication1.Services
         private readonly IRefreshTokenRepository _refreshTokenRepo;
         private readonly ILogger<AuthService> _logger;
         private readonly RedisService _redisServcie;
-        private readonly EmailService _emailService;
         private readonly AuthSettings _authSettings;
         private readonly RoleSettings _roleSettings;
         private readonly AuthMapper _mapper;
         private readonly PasswordHasher<User> _hasher;
        
-
         public AuthService(IUserRepository userRepo, IRoleRepository roleRepo,
             IRefreshTokenRepository refreshTokenRepo, ILogger<AuthService> logger, RedisService redisServcie,
-            EmailService emailService, IOptions<AuthSettings> authOptions, IOptions<RoleSettings> roleOptions)
+            IOptions<AuthSettings> authOptions, IOptions<RoleSettings> roleOptions)
         {
             _userRepo = userRepo;
             _roleRepo = roleRepo;
             _refreshTokenRepo = refreshTokenRepo;
             _logger = logger;
             _redisServcie = redisServcie;
-            _emailService = emailService;
             _authSettings = authOptions.Value;
             _roleSettings = roleOptions.Value;
             _mapper = new AuthMapper();
             _hasher = new PasswordHasher<User>();
         }
 
-        private async Task CheckEmailUnique(string email, Guid? excludeId = null)
-        {
-            var exists = await _userRepo.EmailExistsAsync(email, excludeId);
-
-            if (exists)
-                throw new BadRequestException($"Invalid Email '{email}'.");
-        }
-
         private async Task ValidatePassword(User user, string password)
         {
+            if (user.PasswordHash == null) throw new BadRequestException("Invalid email or password");
+
             var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, password);
             if (result == PasswordVerificationResult.Failed)
             {
@@ -70,7 +62,7 @@ namespace WebApplication1.Services
             }
         }
 
-        private string GenerateToken(User user)
+        private string GenerateToken(User user, string roleName)
         {
             var secretKey = _authSettings.Key;
 
@@ -78,7 +70,7 @@ namespace WebApplication1.Services
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.Name),
+                new Claim(ClaimTypes.Role, roleName),
                 new Claim(ClaimTypes.Version, user.TokenVersion.ToString() ?? "0")
             };
 
@@ -112,28 +104,6 @@ namespace WebApplication1.Services
             return Convert.ToBase64String(hash);
         }
 
-        private async Task<ResultT<AuthResponseDto>> IssueTokens(User user, Guid? tokenId = null, Guid? familyId = null)
-        {
-            var accessToken = GenerateToken(user);
-            var refreshToken = GenerateRefreshToken();
-
-            var entity = _mapper.ToRefreshTokenEntity(refreshToken, user.UserId);
-
-            if (familyId != null && tokenId != null) 
-            {
-                entity.FamilyId = familyId.Value;
-                entity.ReplacedByTokenId = tokenId.Value;
-            }
-
-            entity.Token = HashToken(refreshToken);
-
-            await _refreshTokenRepo.AddAsync(entity);
-
-            return ResultT<AuthResponseDto>.Success(
-                _mapper.ToDto(accessToken, refreshToken)
-            );
-        }
-
         private async Task<RefreshToken> CheckRefreshTokenIsValid(string token)
         {
             if (await _redisServcie.ExistAsync("revoked", token))
@@ -153,84 +123,121 @@ namespace WebApplication1.Services
 
             if (storedToken.IsRevoked)
             {
-                await RevokeAllTokensInFamily(storedToken.FamilyId);
+                await RevokeAllTokensOfUser(storedToken.UserId);
                 throw new ForbiddenException("Token reuse detected");
             }
             return storedToken;
         }
 
-        public async Task RevokeAllTokensInFamily(Guid familyId)
+        public async Task<AuthResponseDto> IssueTokens(User user, string roleName, Guid? tokenId = null)
         {
-            var tokens = await _refreshTokenRepo.GetByFamilyIdAsync(familyId);
+            var accessToken = GenerateToken(user, roleName);
+            var refreshToken = GenerateRefreshToken();
 
-            foreach (var token in tokens)
+            var entity = _mapper.ToRefreshTokenEntity(refreshToken, user.UserId);
+
+            if (tokenId != null)
             {
-                token.IsRevoked = true;
+                entity.ReplacedByTokenId = tokenId.Value;
             }
 
-            await _refreshTokenRepo.UpdateRangeAsync(tokens);
+            entity.Token = HashToken(refreshToken);
+
+            await _refreshTokenRepo.AddAsync(entity);
+
+            return _mapper.ToDto(accessToken, refreshToken);
+        }
+
+        public async Task CheckEmailUnique(string email, Guid? excludeId = null)
+        {
+            var exists = await _userRepo.EmailExistsAsync(email, excludeId);
+
+            if (exists)
+                throw new BadRequestException($"Invalid Email '{email}'.");
         }
 
         public async Task RevokeAllTokensOfUser(Guid userId)
         {
-            var tokens = await _refreshTokenRepo.GetByUserIdAsync(userId);
-
-            foreach (var token in tokens)
-            {
-                token.IsRevoked = true;
-            }
-
-            await _refreshTokenRepo.UpdateRangeAsync(tokens);
+            await _refreshTokenRepo.UpdateRangeAsync(userId);
         }
 
-        private async Task<User> CheckUserExistAndGet(Guid userId)
+        public async Task<User?> CheckUserExistAndGetById(Guid userId)
         {
             var user = await _userRepo.GetByIdAsync(userId);
-
-            if (user == null)
-                throw new BadRequestException("User not found");
             return user;
         }
 
-        public async Task<ResultT<AuthResponseDto>> RegisterAsync(AuthRegisterDto dto)
+        public void BackgroundRegisterWork(Guid userId)
+        {
+            BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
+               job.SendRegisterEmailAsync(userId)
+            );
+        }
+
+        public void BackgroundLoginWork(Guid userId, UserInfo userInfo)
+        {
+            BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
+                job.UserLoginHistroyAsync(userId, userInfo)
+            );
+
+            BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
+                job.SendLoginAlertEmailAsync(userId, userInfo)
+            );
+        }
+
+        public async Task<User?> CheckUserExistAndGetByEmail(string email)
+        {
+            var user = await _userRepo.GetByEmailAsync(email);
+            return user;
+        }
+
+        public async Task<Role?> GetUserRole()
+        {
+           var role = await _roleRepo.GetByNameAsync(_roleSettings.User);
+            return role;
+        }
+
+        public async Task AddUser(User user)
+        {
+            await _userRepo.AddAsync(user);
+        }
+
+        public async Task<AuthResponseDto> RegisterAsync(AuthRegisterDto dto)
         {
             await CheckEmailUnique(dto.Email);
-            var role = await _roleRepo.GetByNameAsync(_roleSettings.User);
+
+            var role = await GetUserRole();
 
             var user = _mapper.ToEntity(dto, role);
 
-            await _userRepo.AddAsync(user);
+            await AddUser(user);
 
-            var createdUser = await CheckUserExistAndGet(user.UserId);
+            BackgroundRegisterWork(user.UserId);
 
-            return await IssueTokens(createdUser);
+            return await IssueTokens(user, role.Name);
         }
 
-        public async Task<ResultT<AuthResponseDto>> LoginAsync(AuthLoginDto dto)
+        public async Task<AuthResponseDto> LoginAsync(AuthLoginDto dto, UserInfo userInfo)
         {
-            var user = await _userRepo.GetByEmailAsync(dto.Email);
+            var user = await CheckUserExistAndGetByEmail(dto.Email);
 
-            if (user == null || user.IsDeleted)
-                throw new NotFoundException("Invalid email or password");
+            if (user == null)
+                throw new BadRequestException("User not found");
 
             await ValidatePassword(user, dto.Password);
 
-            await RevokeAllTokensOfUser(user.UserId);
+            BackgroundLoginWork(user.UserId, userInfo);
 
-            var template = new RegisterEmailTemplate();
-            var registerTemplate = template.Template(user);
-            _logger.LogInformation(
-            $"Template Email: {registerTemplate.ToEmail}, Subject: {registerTemplate.Subject}");
-
-            await _emailService.SendEmailAsync(registerTemplate);
-
-            return await IssueTokens(user);
+            return await IssueTokens(user, user.Role.Name);
         }
 
-        public async Task<ResultT<AuthResponseDto>> Refresh(RefreshTokenDto request)
+        public async Task<AuthResponseDto> Refresh(RefreshTokenDto request)
         {
             var storedToken = await CheckRefreshTokenIsValid(request.Token);
-            var user = await CheckUserExistAndGet(storedToken.UserId);
+            var user = await CheckUserExistAndGetById(storedToken.UserId);
+
+            if (user == null)
+                throw new BadRequestException("User not found");
 
             storedToken.IsRevoked = true;
 
@@ -238,7 +245,7 @@ namespace WebApplication1.Services
 
             await _redisServcie.SetAsync("revoked", request.Token, "1", TimeSpan.FromDays(7));
 
-            return await IssueTokens(user, storedToken.RefreshTokenId, storedToken.FamilyId);
+            return await IssueTokens(user, user.Role.Name, storedToken.RefreshTokenId);
         }
     }
 }

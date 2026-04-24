@@ -1,6 +1,7 @@
 ﻿using MailKit.Net.Smtp;
+using Microsoft.Extensions.Options;
 using MimeKit;
-using WebApplication1.Common.Email;
+using WebApplication1.Email;
 using WebApplication1.Settings;
 
 namespace WebApplication1.Services
@@ -10,9 +11,9 @@ namespace WebApplication1.Services
         private readonly EmailSettings _settings;
         private readonly ILogger<EmailService> _logger;
 
-        public EmailService(EmailSettings settings, ILogger<EmailService> logger)
+        public EmailService(IOptions<EmailSettings> emailOptions, ILogger<EmailService> logger)
         {
-            _settings = settings;
+            _settings = emailOptions.Value;
             _logger = logger;
         }
 
@@ -23,11 +24,11 @@ namespace WebApplication1.Services
             try
             {
                 await smtp.ConnectAsync(
-                    "sandbox.smtp.mailtrap.io",
-                    2525,
+                    _settings.Host,
+                    _settings.Port,
                     MailKit.Security.SecureSocketOptions.StartTls);
 
-                await smtp.AuthenticateAsync("b73321d8c15324", "11c92fe8c44d19");
+                await smtp.AuthenticateAsync(_settings.Username, _settings.Password);
 
                 await smtp.SendAsync(email);
 
@@ -51,7 +52,7 @@ namespace WebApplication1.Services
 
             var email = new MimeMessage();
 
-            email.From.Add(new MailboxAddress("Transviti", "b73321d8c15324"));
+            email.From.Add(new MailboxAddress("", _settings.Username));
             email.To.Add(new MailboxAddress("", request.ToEmail));
             email.Subject = request.Subject;
 

@@ -2,8 +2,11 @@
 
 namespace WebApplication1.Entities
 {
-    public class RefreshToken : BaseEntity
+    public class RefreshToken
     {
+        [Key]
+        public int Id { get; set; }
+
         [Required]
         public Guid RefreshTokenId { get; set; }
 
@@ -12,9 +15,6 @@ namespace WebApplication1.Entities
 
         [Required]
         public Guid UserId { get; set; }
-
-        [Required]
-        public Guid FamilyId { get; set; }
 
         public Guid? ReplacedByTokenId { get; set; }
 

@@ -26,8 +26,8 @@ namespace WebApplication1.Controllers.V1
             _resultHelper = new ResultHelper();
         }
 
-        [HttpGet("image")]
-        public async Task<IActionResult> GetProfileImageFileAsync()
+        [HttpGet("get-image")]
+        public async Task<IActionResult> GetProfileImageAsync()
         {
             var userId = HttpContext.GetUserId();
 
@@ -37,8 +37,6 @@ namespace WebApplication1.Controllers.V1
 
             if (data == null)
                 throw new NotFoundException("No content found");
-
-            Response.Headers["Cache-Control"] = "public,max-age=31536000";
 
             return File(data.Value.FileStream, data.Value.FileType);
         }

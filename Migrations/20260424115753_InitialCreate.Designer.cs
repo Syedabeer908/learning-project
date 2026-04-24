@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260421161326_InitialCreate")]
+    [Migration("20260424115753_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -78,7 +78,7 @@ namespace WebApplication1.Migrations
                     b.ToTable("Control");
                 });
 
-            modelBuilder.Entity("WebApplication1.Entities.RefreshToken", b =>
+            modelBuilder.Entity("WebApplication1.Entities.ExternalLogin", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -98,16 +98,15 @@ namespace WebApplication1.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("ExpiryDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid>("FamilyId")
+                    b.Property<Guid>("ExternalLoginId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsRevoked")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastUpdatedAt")
@@ -115,6 +114,54 @@ namespace WebApplication1.Migrations
 
                     b.Property<Guid?>("LastUpdatedBy")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PictureUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ProviderKey")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalLoginId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Provider", "ProviderKey")
+                        .IsUnique();
+
+                    b.ToTable("ExternalLogin");
+                });
+
+            modelBuilder.Entity("WebApplication1.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("RefreshTokenId")
                         .HasColumnType("uniqueidentifier");
@@ -130,8 +177,6 @@ namespace WebApplication1.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FamilyId");
 
                     b.HasIndex("RefreshTokenId");
 
@@ -341,7 +386,6 @@ namespace WebApplication1.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
@@ -377,10 +421,60 @@ namespace WebApplication1.Migrations
                     b.ToTable("User");
                 });
 
+            modelBuilder.Entity("WebApplication1.Entities.UserLoginHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DeviceInfo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserLoginHistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceInfo");
+
+                    b.HasIndex("IpAddress");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserLoginHistoryId");
+
+                    b.ToTable("UserLoginHistory");
+                });
+
             modelBuilder.Entity("WebApplication1.Entities.Control", b =>
                 {
                     b.HasOne("WebApplication1.Entities.User", "User")
                         .WithMany("Controls")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WebApplication1.Entities.ExternalLogin", b =>
+                {
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("ExternalLogins")
                         .HasForeignKey("UserId")
                         .HasPrincipalKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -455,6 +549,18 @@ namespace WebApplication1.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("WebApplication1.Entities.UserLoginHistory", b =>
+                {
+                    b.HasOne("WebApplication1.Entities.User", "User")
+                        .WithMany("UserLoginHistories")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WebApplication1.Entities.Control", b =>
                 {
                     b.Navigation("RiskControls");
@@ -474,11 +580,15 @@ namespace WebApplication1.Migrations
                 {
                     b.Navigation("Controls");
 
+                    b.Navigation("ExternalLogins");
+
                     b.Navigation("RefreshTokens");
 
                     b.Navigation("RiskControls");
 
                     b.Navigation("Risks");
+
+                    b.Navigation("UserLoginHistories");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -11,15 +12,16 @@ using StackExchange.Redis;
 using System.Security.Claims;
 using System.Text;
 using WebApplication1;
-using WebApplication1.Validator;
 using WebApplication1.Common.Constants;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
+using WebApplication1.Jobs;
 using WebApplication1.Middlewares;
 using WebApplication1.Repository;
 using WebApplication1.Seeders;
 using WebApplication1.Services;
 using WebApplication1.Settings;
+using WebApplication1.Validator;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +63,14 @@ builder.Services.Configure<RoleSettings>(
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 
+//Adding FileSettings
+builder.Services.Configure<FileSettings>(
+    builder.Configuration.GetSection("FileStorage"));
+
+//Adding FileSettings
+builder.Services.Configure<GoogleSettings>(
+    builder.Configuration.GetSection("GoogleOAuth"));
+
 // Adding Authorization policies
 var adminRole = builder.Configuration["StartUpRole:Admin"] ?? "Admin";
 
@@ -78,11 +88,13 @@ builder.Services.AddValidatorsFromAssemblyContaining<UploadProfileImageRequestVa
 
 // Adding scoped (DI) 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IProviderRepository, ProviderRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRepository<Risk>, RiskRepository>();
 builder.Services.AddScoped<IRepository<Control>, ControlRepository>();
 builder.Services.AddScoped<IRepository<RiskControl>, RiskControlRepository>();
 builder.Services.AddScoped<ISoftRepository, SoftRepository>();
+builder.Services.AddScoped<IUserLoginHistoryRepository, UserLoginHistoryRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 builder.Services.AddScoped<AuthService>();
@@ -97,8 +109,20 @@ builder.Services.AddScoped<RedisService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<FileService>();
+builder.Services.AddScoped<ProviderService>();
+builder.Services.AddScoped<GoogleService>();
+builder.Services.AddScoped<AuthBackgroundJobs>();
+
 builder.Services.AddScoped<RoleSettings>();
 builder.Services.AddScoped<EmailSettings>();
+builder.Services.AddScoped<FileSettings>();
+builder.Services.AddScoped<GoogleSettings>();
+
+builder.Services.AddHangfire(config =>
+    config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
+
+builder.Services.AddHangfireServer();
 
 // Secret key for signing JWT (keep this safe!)
 var jwtSettings = builder.Configuration
@@ -192,18 +216,18 @@ builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 var app = builder.Build();
 
-////seeding data
-//using (var scope = app.Services.CreateScope())
-//{
-//    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//seeding data
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-//    context.Database.Migrate();
+    context.Database.Migrate();
 
-//    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleSettings>>();
-//    var seeder = new DbSeeder(context, roleSettings);
+    var roleSettings = scope.ServiceProvider.GetRequiredService<IOptions<RoleSettings>>();
+    var seeder = new DbSeeder(context, roleSettings);
 
-//    await seeder.SeedAsync();
-//}
+    await seeder.SeedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -232,6 +256,9 @@ app.UseMiddleware<UserValidationMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthorization();
+
+// Adding Hangfire Dashboard
+app.UseHangfireDashboard();
 
 app.MapControllers();
 

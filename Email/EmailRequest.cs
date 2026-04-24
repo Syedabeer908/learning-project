@@ -1,4 +1,4 @@
-﻿namespace WebApplication1.Common.Email
+﻿namespace WebApplication1.Email
 {
     public class EmailRequest
     {

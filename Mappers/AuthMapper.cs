@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using WebApplication1.Common.Exceptions;
+using WebApplication1.Common.Parsers;
 using WebApplication1.DTOs;
 using WebApplication1.Entities;
 
@@ -24,6 +25,7 @@ namespace WebApplication1.Mappers
                 Username = dto.Username,
                 Email = dto.Email,
                 RoleId = role.RoleId,
+                TokenVersion = 0
             };
 
             user.PasswordHash = _hasher.HashPassword(user, dto.Password);
@@ -37,10 +39,21 @@ namespace WebApplication1.Mappers
                 RefreshTokenId = Guid.NewGuid(),
                 Token = token,
                 ExpiryDate = DateTime.UtcNow.AddDays(7),
-                FamilyId = Guid.NewGuid(),
                 UserId = userId,
             };
             return refreshToken;
+        }
+
+        public UserLoginHistory ToLoginHIstoryEntity(Guid userId, UserInfo info)
+        {
+            return new UserLoginHistory
+            {
+                UserLoginHistoryId = Guid.NewGuid(),
+                UserId = userId,
+                IpAddress = info.IpAddress,
+                DeviceInfo = info.DeviceInfo,
+                LoginTime = info.LoginTime,
+            };
         }
 
         public AuthResponseDto ToDto(string token, string refreshToken)
