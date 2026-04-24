@@ -42,8 +42,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register Redis ConnectionMultiplexer (Singleton)
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
-    //var configuration = "localhost:6376";
-    var configuration = builder.Configuration.GetSection("Redis:ConnectionString").Value ?? "localhost:6379";
+    
+    var configuration = builder.Configuration["Redis:ConnectionString"];
     var options = ConfigurationOptions.Parse(configuration);
     options.AbortOnConnectFail = false; 
 
@@ -55,24 +55,8 @@ builder.Services.Configure<AuthSettings>(
     builder.Configuration.GetSection("SecretKeys:Jwt")
 );
 
-// Adding RoleConstants
-builder.Services.Configure<RoleSettings>(
-    builder.Configuration.GetSection("StartUpRole"));
-
-// Adding RoleConstants
-builder.Services.Configure<EmailSettings>(
-    builder.Configuration.GetSection("EmailSettings"));
-
-//Adding FileSettings
-builder.Services.Configure<FileSettings>(
-    builder.Configuration.GetSection("FileStorage"));
-
-//Adding FileSettings
-builder.Services.Configure<GoogleSettings>(
-    builder.Configuration.GetSection("GoogleOAuth"));
-
 // Adding Authorization policies
-var adminRole = builder.Configuration["StartUpRole:Admin"] ?? "Admin";
+var adminRole = builder.Configuration["StartUpRole:Admin"];
 
 builder.Services.AddAuthorization(options =>
 {
@@ -116,6 +100,7 @@ builder.Services.AddScoped<AuthBackgroundJobs>();
 builder.Services.AddScoped<RoleSettings>();
 builder.Services.AddScoped<EmailSettings>();
 builder.Services.AddScoped<FileSettings>();
+builder.Services.AddScoped<AuthSettings>();
 builder.Services.AddScoped<GoogleSettings>();
 
 builder.Services.AddHangfire(config =>
@@ -124,12 +109,7 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
-// Secret key for signing JWT (keep this safe!)
-var jwtSettings = builder.Configuration
-    .GetSection("SecretKeys:Jwt")
-    .Get<AuthSettings>();
-
-var jwtSettingsKey = jwtSettings?.Key ?? "3d7tt#JbeX!&FY3!%e+XQE8xtrHFcpqc";
+var jwtSettingsKey = builder.Configuration["SecretKeys:Jwt"];
 
 var secretKey = Encoding.UTF8.GetBytes(jwtSettingsKey);
 
