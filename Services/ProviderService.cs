@@ -1,6 +1,4 @@
-﻿using StackExchange.Redis;
-using WebApplication1.Common.Exceptions;
-using WebApplication1.Common.Parsers;
+﻿using WebApplication1.Common.Parsers;
 using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;

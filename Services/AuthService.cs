@@ -9,7 +9,6 @@ using System.Security.Cryptography;
 using WebApplication1.Common.Constants;
 using WebApplication1.Common.Exceptions;
 using WebApplication1.Common.Parsers;
-using WebApplication1.Common.Results;
 using WebApplication1.DTOs;
 using WebApplication1.Entities;
 using WebApplication1.Interfaces;
@@ -169,9 +168,9 @@ namespace WebApplication1.Services
 
         public void BackgroundRegisterWork(Guid userId)
         {
-            BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
-               job.SendRegisterEmailAsync(userId)
-            );
+            //BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
+            //   job.SendRegisterEmailAsync(userId)
+            //);
         }
 
         public void BackgroundLoginWork(Guid userId, UserInfo userInfo)
@@ -180,9 +179,9 @@ namespace WebApplication1.Services
                 job.UserLoginHistroyAsync(userId, userInfo)
             );
 
-            BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
-                job.SendLoginAlertEmailAsync(userId, userInfo)
-            );
+            //BackgroundJob.Enqueue<AuthBackgroundJobs>(job =>
+            //    job.SendLoginAlertEmailAsync(userId, userInfo)
+            //);
         }
 
         public async Task<User?> CheckUserExistAndGetByEmail(string email)

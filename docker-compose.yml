@@ -1,30 +1,70 @@
-version: '3.8'
-
 services:
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: backend_api
     ports:
       - "5000:8080"
+    depends_on:
+      sql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=appdb;User Id=sa;Password=Your_password123;
-    depends_on:
-      - db
-      - redis
 
-  db:
+      # Database
+      - ConnectionStrings__DefaultConnection=Server=${DB_HOST};Database=${DB_NAME};User Id=${DB_USERNAME};Password=${DB_PASSWORD};TrustServerCertificate=True;
+
+      # Redis
+      - Redis__ConnectionString=${REDIS_HOST}
+
+      # JWT
+      - SecretKeys__Jwt__key=${JWT_KEY}
+      - SecretKeys__Jwt__ExpiryHours=${JWT_EXPIRY_HOURS}
+      - SecretKeys__Jwt__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+
+      # Google OAuth
+      - GoogleOAuth__ClientId=${GOOGLE_CLIENT_ID}
+      - GoogleOAuth__ClientSecret=${GOOGLE_CLIENT_SECRET}
+
+      # File Storage
+      - FileStorage__BasePath=${FILE_STORAGE_PATH}
+
+      # Email
+      - EmailSettings__Host=${EMAIL_HOST}
+      - EmailSettings__Port=${EMAIL_PORT}
+      - EmailSettings__Username=${EMAIL_USERNAME}
+      - EmailSettings__Password=${EMAIL_PASSWORD}
+
+      #Startup Role
+      - StartUpRole__Admin=${ROLE_NAME_ADMIN}
+      - StartUpRole__User=${ROLE_NAME_USER}
+    volumes:
+      - D:/AppStorage:/app/storage
+  sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sql_server
     environment:
-      SA_PASSWORD: "Your_password123"
       ACCEPT_EULA: "Y"
+      SA_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "1433:1433"
+      - "14330:1433"
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "${DB_NAME}", "-P", "${DB_PASSWORD}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
     container_name: redis_cache
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

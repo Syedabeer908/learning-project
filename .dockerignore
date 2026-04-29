@@ -1,6 +1,22 @@
 bin/
 obj/
 .vs/
+.vscode/
 .git/
+.gitignore
 Dockerfile
 docker-compose.yml
+*.user
+*.suo
+*.md
+*.log
+TestResults/
+node_modules/
+
+.env
+.env.*
+
+# Logs
+log/
+logs/
+Logs/

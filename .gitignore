@@ -29,6 +29,7 @@ bld/
 # Logs
 log/
 logs/
+Logs/
 
 # .NET
 artifacts/
@@ -49,3 +50,10 @@ TestResults/
 *~
 CodeCoverage/
 *.binlog
+
+.env
+.env.*
+.dockerignore
+
+Dockerfile
+docker-compose.yml

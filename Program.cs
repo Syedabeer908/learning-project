@@ -50,18 +50,36 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     return ConnectionMultiplexer.Connect(options);
 });
 
+
 // Adding AuthConstants
 builder.Services.Configure<AuthSettings>(
     builder.Configuration.GetSection("SecretKeys:Jwt")
 );
 
-// Adding Authorization policies
-var adminRole = builder.Configuration["StartUpRole:Admin"];
+// Adding RoleConstants
+builder.Services.Configure<RoleSettings>(
+    builder.Configuration.GetSection("StartUpRole")
+);
+
+// Adding FileSettings
+builder.Services.Configure<FileSettings>(
+    builder.Configuration.GetSection("FileStorage")
+);
+
+// Adding EmailSettings
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings")
+);
+
+// Adding GoogleSettings
+builder.Services.Configure<GoogleSettings>(
+    builder.Configuration.GetSection("GoogleOAuth")
+);
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole(adminRole));
+        policy.RequireRole(builder.Configuration["StartUpRole:Admin"]));
 });
 
 builder.Services
@@ -109,9 +127,7 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
-var jwtSettingsKey = builder.Configuration["SecretKeys:Jwt"];
-
-var secretKey = Encoding.UTF8.GetBytes(jwtSettingsKey);
+var secretKey = Encoding.UTF8.GetBytes(builder.Configuration["SecretKeys:Jwt:Key"]);
 
 // Add Authentication
 builder.Services.AddAuthentication(options =>
